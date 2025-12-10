@@ -143,20 +143,26 @@
             </button>
         </div>
 
-        <!-- Chat Area (Flex-1 ensures it takes available space but doesn't go under footer) -->
-        <div id="chatContainer" class="flex-1 overflow-y-auto p-5 flex flex-col gap-4 bg-white chat-scroll">
+        <!-- Chat Area -->
+        <div id="chatContainer" class="flex-1 overflow-y-auto p-5 flex flex-col gap-6 bg-white chat-scroll">
             <!-- Welcome Message -->
-            <div class="flex gap-3 message-enter">
+            <div class="flex gap-3 message-enter w-full">
                 <div class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center shrink-0 mt-1">
                     <i class="fas fa-robot text-xs text-slate-500"></i>
                 </div>
-                <div class="bg-slate-50 text-slate-700 p-4 rounded-2xl rounded-tl-none max-w-[85%] text-[15px] leading-relaxed border border-slate-100">
-                    Hello! I'm your AI English tutor. I will listen to you and correct any mistakes I hear. Let's practice!
+                <div class="relative group max-w-[85%]">
+                    <div class="bg-slate-50 text-slate-700 p-4 rounded-2xl rounded-tl-none text-[15px] leading-relaxed border border-slate-100 shadow-sm pb-8">
+                        Hello! I'm your AI English tutor. I will listen to you and correct any mistakes I hear. Let's practice!
+                    </div>
+                    <!-- Translate Button -->
+                    <button onclick="translateMessage(this, 'Hello! I am your AI English tutor. I will listen to you and correct any mistakes I hear. Let\'s practice!')" class="absolute -bottom-3 right-2 bg-white border border-slate-200 shadow-sm rounded-full px-2 py-1 text-[10px] font-medium text-slate-500 flex items-center gap-1 hover:bg-slate-50 transition-colors z-10">
+                        <i class="fas fa-language text-brand-500"></i> Traducir
+                    </button>
                 </div>
             </div>
         </div>
 
-        <!-- Audio Visualizer (Absolute but safe zone) -->
+        <!-- Audio Visualizer -->
         <div id="audioVisualizer" class="absolute bottom-[100px] left-0 w-full flex justify-center items-center gap-1 h-8 opacity-0 transition-opacity duration-300 pointer-events-none z-10">
             <div class="wave-bar w-1 bg-brand-500 rounded-full h-1"></div>
             <div class="wave-bar w-1 bg-brand-500 rounded-full h-2" style="animation-delay: 0.1s"></div>
@@ -165,11 +171,9 @@
             <div class="wave-bar w-1 bg-brand-500 rounded-full h-1" style="animation-delay: 0.4s"></div>
         </div>
 
-        <!-- Bottom Controls (Now part of the Flex flow, NOT absolute) -->
+        <!-- Bottom Controls -->
         <div class="w-full bg-white border-t border-slate-100 p-3 pb-6 flex flex-col items-center gap-2 z-30 shrink-0 shadow-[0_-5px_20px_rgba(0,0,0,0.02)]">
-            
             <div id="statusText" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest transition-all h-4">Tap to speak</div>
-
             <button id="micBtn" class="group relative w-16 h-16 rounded-full bg-slate-900 text-white shadow-xl shadow-slate-900/20 flex items-center justify-center transition-all hover:scale-105 active:scale-95">
                 <div class="absolute inset-0 rounded-full border border-white/10"></div>
                 <i class="fas fa-microphone text-xl group-hover:text-brand-200 transition-colors"></i>
@@ -199,7 +203,6 @@
         let recognition;
         let conversationHistory = [];
         
-        // --- Prompts ---
         const SYSTEM_PROMPT = `You are a friendly and helpful English teacher. 
         1. CRITICAL: If the user makes ANY grammar, vocabulary, or pronunciation mistake, you MUST start your response with a "CORRECTION:" block.
         2. Inside the "CORRECTION:" block, rewrite the user's sentence but wrap the MISTAKE in ~tildes~ and the CORRECTION in *asterisks* immediately after.
@@ -240,7 +243,6 @@
 
                 recognition.onend = () => {
                     isListening = false;
-                    // Don't reset UI yet if we are processing
                 };
 
                 recognition.onresult = (event) => {
@@ -262,7 +264,7 @@
 
         async function handleUserInput(text) {
             updateMicState('processing');
-            addMessage(text, true);
+            addMessage(text, true); // User message
             
             conversationHistory.push({ role: "user", parts: [{ text: text }] });
 
@@ -270,19 +272,18 @@
                 // 1. Get Text Response
                 const responseText = await callGeminiText();
                 
-                // 2. Process & Display Text (Now handles the colorful corrections)
+                // 2. Process & Display Text
                 const displayHtml = formatResponse(responseText);
-                addMessage(displayHtml, false, true); // true = allow HTML
+                addMessage(displayHtml, false, true, responseText); // Bot message (pass raw text for translation)
                 
                 conversationHistory.push({ role: "model", parts: [{ text: responseText }] });
 
                 // 3. Get Audio (TTS)
                 statusText.textContent = "Generating Voice...";
-                // Strip the correction markings for speech so it doesn't say "tilde goes tilde"
                 let textToSpeak = responseText
                     .replace(/CORRECTION:/i, 'Here is a quick correction.')
-                    .replace(/~.*?~/g, '') // Remove the error word completely for speech
-                    .replace(/\*/g, '');   // Remove asterisks around correction
+                    .replace(/~.*?~/g, '') 
+                    .replace(/\*/g, '');
                 
                 await playGeminiTTS(textToSpeak);
                 
@@ -315,7 +316,6 @@
 
         async function playGeminiTTS(text) {
             const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${GEMINI_API_KEY}`;
-            
             const payload = {
                 contents: [{ parts: [{ text: text }] }],
                 generationConfig: {
@@ -335,7 +335,6 @@
             });
 
             if (!response.ok) throw new Error('TTS API Error');
-            
             const data = await response.json();
             const base64Audio = data.candidates[0].content.parts[0].inlineData.data;
             const wavUrl = pcmToWav(base64Audio);
@@ -344,15 +343,81 @@
                 audioPlayer.src = wavUrl;
                 audioVisualizer.classList.remove('opacity-0');
                 audioVisualizer.classList.add('playing-audio');
-                
                 audioPlayer.onended = () => {
                     audioVisualizer.classList.add('opacity-0');
                     audioVisualizer.classList.remove('playing-audio');
                     resolve();
                 };
-                
                 audioPlayer.play();
             });
+        }
+
+        // --- Translation Logic ---
+        
+        async function translateMessage(btnElement, text) {
+            if (!text) return;
+            
+            // Visual feedback on button
+            const originalBtnContent = btnElement.innerHTML;
+            btnElement.innerHTML = '<i class="fas fa-spinner fa-spin text-brand-500"></i> Traduciendo...';
+            btnElement.disabled = true;
+
+            try {
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${GEMINI_API_KEY}`;
+                const payload = {
+                    contents: [{
+                        role: "user",
+                        parts: [{ text: `Translate the following English text to Spanish. If it contains a grammar correction explanation, keep the explanation clear in Spanish. Text: "${text}"` }]
+                    }]
+                };
+
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) throw new Error('Translation failed');
+                const data = await response.json();
+                const translatedText = data.candidates[0].content.parts[0].text;
+
+                // Create and append translation box inside the bubble container
+                const bubbleContainer = btnElement.closest('.group');
+                const translationDiv = document.createElement('div');
+                translationDiv.className = "mt-2 bg-indigo-50 border border-indigo-100 p-3 rounded-xl text-sm text-indigo-900 animate-fade-in";
+                translationDiv.innerHTML = `
+                    <div class="flex items-center gap-2 mb-1">
+                        <i class="fas fa-language text-indigo-400"></i>
+                        <span class="text-[10px] font-bold uppercase tracking-wider text-indigo-400">Traducción</span>
+                    </div>
+                    ${translatedText}
+                `;
+                
+                // Insert after the message text but before the button (or just append to container)
+                // The button is absolute, so appending to the container works well
+                // We actually want it INSIDE the message bubble or right below it.
+                // Current structure: .group -> [.bg-white (msg)] + [button]
+                // Let's insert it inside the message bubble div or append to group.
+                // Appending to group is safer for layout.
+                
+                // Find the message bubble div to append INTO it (at bottom) for cleaner look?
+                // Or just append to the group wrapper.
+                const msgBubble = bubbleContainer.querySelector('div:first-child');
+                msgBubble.appendChild(translationDiv);
+                msgBubble.classList.add('pb-8'); // Ensure padding for the button remains
+                
+                // Hide the translate button after success or keep it to re-translate? 
+                // Let's hide it to avoid clutter.
+                btnElement.style.display = 'none';
+
+            } catch (error) {
+                console.error(error);
+                btnElement.innerHTML = '<i class="fas fa-exclamation-circle text-red-500"></i> Error';
+                setTimeout(() => {
+                    btnElement.innerHTML = originalBtnContent;
+                    btnElement.disabled = false;
+                }, 2000);
+            }
         }
 
         function pcmToWav(base64PCM) {
@@ -410,9 +475,13 @@
             }
         }
 
-        function addMessage(content, isUser, isHtml = false) {
+        function addMessage(content, isUser, isHtml = false, rawTextForTranslation = null) {
+            // Determine text to store for translation (raw text preferred over HTML)
+            const textToTranslate = rawTextForTranslation || content.replace(/<[^>]*>?/gm, ''); // Simple strip tags if no raw provided
+            const safeText = textToTranslate.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+
             const div = document.createElement('div');
-            div.className = "flex gap-3 message-enter";
+            div.className = "flex gap-3 message-enter w-full";
             
             if (isUser) {
                 div.className += " flex-row-reverse";
@@ -420,8 +489,13 @@
                     <div class="w-8 h-8 rounded-full bg-brand-500 flex items-center justify-center shrink-0 mt-1 shadow-lg shadow-brand-500/30">
                         <i class="fas fa-user text-xs text-white"></i>
                     </div>
-                    <div class="bg-brand-600 text-white p-4 rounded-2xl rounded-tr-none max-w-[85%] text-[15px] leading-relaxed shadow-md shadow-brand-500/10">
-                        ${content}
+                    <div class="relative group max-w-[85%]">
+                        <div class="bg-brand-600 text-white p-4 rounded-2xl rounded-tr-none text-[15px] leading-relaxed shadow-md shadow-brand-500/10 pb-8">
+                            ${content}
+                        </div>
+                        <button onclick="translateMessage(this, '${safeText}')" class="absolute -bottom-3 left-2 bg-white border border-slate-100 shadow-md rounded-full px-2 py-1 text-[10px] font-medium text-brand-600 flex items-center gap-1 hover:bg-slate-50 transition-colors z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                            <i class="fas fa-language"></i> Traducir
+                        </button>
                     </div>
                 `;
             } else {
@@ -429,21 +503,24 @@
                     <div class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center shrink-0 mt-1">
                         <i class="fas fa-robot text-xs text-slate-500"></i>
                     </div>
-                    <div class="bg-white text-slate-700 p-4 rounded-2xl rounded-tl-none max-w-[85%] text-[15px] leading-relaxed border border-slate-100 shadow-sm">
-                        ${isHtml ? content : content}
+                    <div class="relative group max-w-[85%]">
+                        <div class="bg-white text-slate-700 p-4 rounded-2xl rounded-tl-none text-[15px] leading-relaxed border border-slate-100 shadow-sm pb-8">
+                            ${isHtml ? content : content}
+                        </div>
+                        <button onclick="translateMessage(this, '${safeText}')" class="absolute -bottom-3 right-2 bg-white border border-slate-200 shadow-sm rounded-full px-2 py-1 text-[10px] font-medium text-slate-500 flex items-center gap-1 hover:bg-slate-50 transition-colors z-10 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-200">
+                            <i class="fas fa-language text-brand-500"></i> Traducir
+                        </button>
                     </div>
                 `;
             }
             
             chatContainer.appendChild(div);
-            // Wait slight tick for layout to update before scrolling
             requestAnimationFrame(() => {
                 chatContainer.scrollTo({ top: chatContainer.scrollHeight, behavior: 'smooth' });
             });
         }
 
         function formatResponse(text) {
-            // Updated Format Logic: Look for "CORRECTION:" block
             if (text.includes('CORRECTION:')) {
                 let parts = text.split('\n');
                 let correctionLine = parts.find(p => p.includes('CORRECTION:'));
@@ -451,14 +528,8 @@
 
                 if (correctionLine) {
                     let cleanCorrection = correctionLine.replace(/CORRECTION:/i, '').trim();
-                    
-                    // Replace ~error~ with red strikethrough
-                    cleanCorrection = cleanCorrection.replace(/~(.*?)~/g, 
-                        '<span class="text-red-500 line-through decoration-2 opacity-80 mx-1">$1</span>');
-                    
-                    // Replace *correction* with green bold
-                    cleanCorrection = cleanCorrection.replace(/\*(.*?)\*/g, 
-                        '<span class="text-green-600 font-bold mx-1">$1</span>');
+                    cleanCorrection = cleanCorrection.replace(/~(.*?)~/g, '<span class="text-red-500 line-through decoration-2 opacity-80 mx-1">$1</span>');
+                    cleanCorrection = cleanCorrection.replace(/\*(.*?)\*/g, '<span class="text-green-600 font-bold mx-1">$1</span>');
 
                     const correctionBlock = `
                         <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 mb-4">
@@ -471,7 +542,6 @@
                             </div>
                         </div>
                     `;
-                    
                     return correctionBlock + restOfText.replace(/\n/g, '<br>');
                 }
             }
