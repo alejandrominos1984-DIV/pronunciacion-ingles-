@@ -55,14 +55,13 @@
         .chat-scroll::-webkit-scrollbar-track { background: transparent; }
         .chat-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
 
-        /* Message Animations - Solo para mensajes confirmados */
-        @keyframes slideIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        
+        /* Animations */
         .message-enter {
-            animation: slideIn 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+            animation: fadeIn 0.2s ease-out forwards;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
         }
 
         /* Pulse for listening */
@@ -132,7 +131,6 @@
         <div class="bg-white/80 backdrop-blur-xl p-4 pt-safe-top flex items-center justify-between border-b border-slate-100 sticky top-0 z-20 shrink-0">
             <div class="flex items-center gap-3">
                 <div class="relative">
-                    <!-- Profile Picture -->
                     <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&h=100&fit=crop&crop=faces&q=80" 
                          alt="Teacher Doraly" 
                          class="w-12 h-12 rounded-full object-cover border-2 border-white shadow-md">
@@ -222,10 +220,10 @@
         let isListening = false;
         let recognition;
         let conversationHistory = [];
-        let previewElement = null; 
         
         // Variables for the "Anti-Duplicate" logic
-        let sessionTranscript = ""; // Accumulates finalized text segments
+        let committedText = ""; // Text that has been "saved" from previous segments
+        let currentInterim = ""; // What is currently being spoken
         
         const SYSTEM_PROMPT = `You are "Teacher Doraly", a professional, warm, and encouraging English teacher. 
         1. CRITICAL: If the user makes ANY grammar, vocabulary, or pronunciation mistake, you MUST start your response with a "CORRECTION:" block.
@@ -236,7 +234,6 @@
         5. Keep your conversational response concise (1-3 sentences).
         6. Always act as a female teacher named Doraly.`;
 
-        // --- Initialization ---
         function init() {
             updateVoiceUI();
             if (!GEMINI_API_KEY) {
@@ -248,75 +245,81 @@
             conversationHistory.push({ role: "model", parts: [{ text: "Understood. I am Teacher Doraly. I will listen carefully." }] });
         }
 
-        // --- Speech Recognition Logic (Revised for Android No-Dupes) ---
+        // --- Speech Logic (Commit Strategy) ---
         
         function startNewRecognition() {
-            if (recognition) {
-                recognition.abort();
-                recognition = null;
-            }
-            
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             if (!SpeechRecognition) {
                 alert("Browser not supported. Use Chrome.");
                 return;
             }
 
+            if (recognition) {
+                recognition.onend = null; // Prevent loops during hard reset
+                recognition.stop();
+            }
+
             recognition = new SpeechRecognition();
             recognition.lang = 'en-US';
-            // CRITICAL FIX: continuous = false forces Android to flush buffer every sentence.
-            // We will manually restart it in onend to emulate "continuous" behavior.
+            // continuous = false ensures we get chunks one by one.
+            // We manually restart in onend to simulate continuous listening.
             recognition.continuous = false; 
             recognition.interimResults = true;
 
             recognition.onstart = () => {
-                // Only update UI if we are officially "listening" (first start)
                 if (isListening) {
                     updateMicState('listening');
-                    if (!previewElement) createPreviewBubble();
+                    if (!document.getElementById('previewContainer')) createPreviewBubble();
                 }
             };
 
             recognition.onend = () => {
-                // If the user hasn't pressed stop manually, we restart immediately.
-                // This "loop" prevents the Android buffer from getting full and repeating text.
+                // When a sentence finishes (silence or max length)
                 if (isListening) {
-                    recognition.start();
+                    // Commit any pending final result to the committedText accumulator
+                    // (Logic happens in onresult)
+                    
+                    // Restart immediately to keep listening
+                    try {
+                        recognition.start();
+                    } catch(e) {
+                        console.log("Restarting recognition...");
+                    }
                 } else {
-                    // User pressed stop manually -> Finalize
-                    stopAndSend();
+                    // If manually stopped, send everything
+                    finalizeAndSend();
                 }
             };
 
             recognition.onresult = (event) => {
-                let currentChunk = "";
-                for (let i = event.resultIndex; i < event.results.length; ++i) {
-                    if (event.results[i].isFinal) {
-                        // Append to our session accumulator
-                        sessionTranscript += event.results[i][0].transcript + " ";
-                    } else {
-                        currentChunk += event.results[i][0].transcript;
-                    }
+                // With continuous=false, we usually get resultIndex 0
+                let transcript = "";
+                let isFinal = false;
+
+                if (event.results.length > 0) {
+                    transcript = event.results[0][0].transcript;
+                    isFinal = event.results[0].isFinal;
                 }
 
-                // Display: Accumulator + Current Interim
-                const display = (sessionTranscript + currentChunk).trim();
-                
-                if (previewElement) {
-                    previewElement.innerText = display || "...";
-                    chatContainer.scrollTo({ top: chatContainer.scrollHeight, behavior: 'smooth' });
+                // If this chunk is final, add it to our committed history
+                if (isFinal) {
+                    committedText += transcript + " ";
+                    currentInterim = ""; // Reset interim
+                } else {
+                    currentInterim = transcript;
                 }
+
+                // Update UI: Committed History + Current Interim
+                updatePreviewBubble((committedText + currentInterim).trim());
             };
 
             recognition.onerror = (event) => {
-                // Ignore benign errors
-                if (event.error === 'no-speech') return;
-                
-                console.error("Speech Error", event);
-                if (event.error === 'not-allowed') {
-                    alert("Microphone blocked.");
-                    stopManually();
+                console.log("Speech error", event.error);
+                if (event.error === 'no-speech') {
+                    // Ignore, just restart in onend if listening
+                    return; 
                 }
+                // Allow restart
             };
 
             try {
@@ -332,47 +335,44 @@
             if (!GEMINI_API_KEY) return toggleConfig();
             
             if (isListening) {
-                // STOPPING
-                stopManually();
+                // STOP
+                isListening = false;
+                if (recognition) recognition.stop();
+                finalizeAndSend();
             } else {
-                // STARTING
+                // START
                 isListening = true;
-                sessionTranscript = ""; // Reset buffer
+                committedText = "";
+                currentInterim = "";
                 startNewRecognition();
             }
         });
 
-        function stopManually() {
-            isListening = false; // This flag stops the loop in onend
-            if (recognition) recognition.stop();
-            // Finalize happens in onend or we can force it here if needed, 
-            // but usually onend fires shortly after stop().
-            // Let's force UI update here to feel responsive.
+        function finalizeAndSend() {
             updateMicState('processing');
-        }
-
-        function stopAndSend() {
-            updateMicState('processing');
-            if (previewElement) {
-                let text = previewElement.innerText.trim();
-                if (text === "...") text = "";
-                
-                if (text.length > 0) {
-                    finalizePreviewBubble(); 
-                    handleUserInput(text);
-                } else {
-                    removePreviewBubble();
-                    updateMicState('idle');
-                }
+            // Combine final buffers
+            const fullText = (committedText + currentInterim).trim();
+            
+            if (fullText.length > 0) {
+                removePreviewBubble(); // Remove temp bubble
+                handleUserInput(fullText); // Send real message
             } else {
+                removePreviewBubble();
                 updateMicState('idle');
             }
+            
+            // Clear buffers
+            committedText = "";
+            currentInterim = "";
         }
 
         // --- Chat Logic ---
 
         async function handleUserInput(text) {
             if (!text.trim()) return;
+            
+            // Add user message to UI
+            addMessage(text, true); 
             
             conversationHistory.push({ role: "user", parts: [{ text: text }] });
 
@@ -457,13 +457,12 @@
             });
         }
 
-        // --- Preview Bubble Helpers ---
+        // --- Preview Bubble Logic (Updated to be instant) ---
 
         function createPreviewBubble() {
             removePreviewBubble();
-
             const div = document.createElement('div');
-            // Remove 'message-enter' for instant appearance
+            // No animation class
             div.className = "flex gap-3 w-full flex-row-reverse"; 
             div.id = "previewContainer";
             div.innerHTML = `
@@ -471,67 +470,66 @@
                     ...
                 </div>
                 <div class="relative group max-w-[85%]">
-                    <div class="bg-blue-50 text-blue-800 p-4 rounded-2xl rounded-tr-none text-[15px] leading-relaxed shadow-inner border border-blue-100 transition-all">
+                    <div class="bg-blue-50 text-blue-800 p-4 rounded-2xl rounded-tr-none text-[15px] leading-relaxed shadow-inner border border-blue-100">
                         <span id="previewText">...</span>
                     </div>
                 </div>
             `;
             chatContainer.appendChild(div);
-            previewElement = div.querySelector('#previewText');
             chatContainer.scrollTo({ top: chatContainer.scrollHeight, behavior: 'smooth' });
         }
 
-        function finalizePreviewBubble() {
-            const container = document.getElementById('previewContainer');
-            if (container) {
-                const text = previewElement.innerText;
-                const safeText = text.replace(/'/g, "\\'").replace(/"/g, '&quot;');
-                
-                container.innerHTML = `
-                    <div class="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center shrink-0 mt-1 shadow-lg shadow-blue-500/30 text-white font-bold text-xs">
-                        TÚ
-                    </div>
-                    <div class="relative group max-w-[85%]">
-                        <div class="bg-blue-600 text-white p-4 rounded-2xl rounded-tr-none text-[15px] leading-relaxed shadow-md shadow-blue-500/10 pb-8">
-                            ${text}
-                        </div>
-                        <button onclick="translateMessage(this, '${safeText}')" class="absolute -bottom-3 left-2 bg-white border border-slate-100 shadow-md rounded-full px-3 py-1.5 text-[11px] font-semibold text-blue-600 flex items-center gap-1.5 hover:bg-slate-50 transition-colors z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 cursor-pointer">
-                            <i class="fas fa-language text-blue-500 text-sm"></i> Traducir
-                        </button>
-                    </div>
-                `;
-                container.id = ""; 
-                previewElement = null;
+        function updatePreviewBubble(text) {
+            const el = document.getElementById('previewText');
+            if (el) {
+                el.innerText = text || "...";
+                // Keep scrolling to bottom as text grows
+                chatContainer.scrollTo({ top: chatContainer.scrollHeight, behavior: 'smooth' });
             }
         }
 
         function removePreviewBubble() {
             const container = document.getElementById('previewContainer');
             if (container) container.remove();
-            previewElement = null;
         }
 
         function addMessage(content, isUser, isHtml = false, rawTextForTranslation = null) {
-            if (isUser) return; // Users use preview bubble
-
             const textToTranslate = rawTextForTranslation || content.replace(/<[^>]*>?/gm, '');
             const safeText = textToTranslate.replace(/'/g, "\\'").replace(/"/g, '&quot;');
 
             const div = document.createElement('div');
+            // 'message-enter' animation only for finalized messages
             div.className = "flex gap-3 message-enter w-full";
             
-            div.innerHTML = `
-                <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&h=100&fit=crop&crop=faces&q=80" 
-                        class="w-8 h-8 rounded-full object-cover mt-1 border border-slate-100 shadow-sm shrink-0">
-                <div class="relative group max-w-[85%]">
-                    <div class="bg-white text-slate-700 p-4 rounded-2xl rounded-tl-none text-[15px] leading-relaxed border border-slate-100 shadow-sm pb-8">
-                        ${isHtml ? content : content}
+            if (isUser) {
+                div.className += " flex-row-reverse";
+                div.innerHTML = `
+                    <div class="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center shrink-0 mt-1 shadow-lg shadow-blue-500/30 text-white font-bold text-xs">
+                        TÚ
                     </div>
-                    <button onclick="translateMessage(this, '${safeText}')" class="absolute -bottom-3 right-2 bg-white border border-slate-200 shadow-sm rounded-full px-3 py-1.5 text-[11px] font-semibold text-slate-600 flex items-center gap-1.5 hover:text-blue-600 hover:border-blue-200 transition-all z-10 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-200 cursor-pointer">
-                        <i class="fas fa-language text-blue-500 text-sm"></i> Traducir
-                    </button>
-                </div>
-            `;
+                    <div class="relative group max-w-[85%]">
+                        <div class="bg-blue-600 text-white p-4 rounded-2xl rounded-tr-none text-[15px] leading-relaxed shadow-md shadow-blue-500/10 pb-8">
+                            ${content}
+                        </div>
+                        <button onclick="translateMessage(this, '${safeText}')" class="absolute -bottom-3 left-2 bg-white border border-slate-100 shadow-md rounded-full px-3 py-1.5 text-[11px] font-semibold text-blue-600 flex items-center gap-1.5 hover:bg-slate-50 transition-colors z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 cursor-pointer">
+                            <i class="fas fa-language text-blue-500 text-sm"></i> Traducir
+                        </button>
+                    </div>
+                `;
+            } else {
+                div.innerHTML = `
+                    <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&h=100&fit=crop&crop=faces&q=80" 
+                         class="w-8 h-8 rounded-full object-cover mt-1 border border-slate-100 shadow-sm shrink-0">
+                    <div class="relative group max-w-[85%]">
+                        <div class="bg-white text-slate-700 p-4 rounded-2xl rounded-tl-none text-[15px] leading-relaxed border border-slate-100 shadow-sm pb-8">
+                            ${isHtml ? content : content}
+                        </div>
+                        <button onclick="translateMessage(this, '${safeText}')" class="absolute -bottom-3 right-2 bg-white border border-slate-200 shadow-sm rounded-full px-3 py-1.5 text-[11px] font-semibold text-slate-600 flex items-center gap-1.5 hover:text-blue-600 hover:border-blue-200 transition-all z-10 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-200 cursor-pointer">
+                            <i class="fas fa-language text-blue-500 text-sm"></i> Traducir
+                        </button>
+                    </div>
+                `;
+            }
             
             chatContainer.appendChild(div);
             requestAnimationFrame(() => {
@@ -539,7 +537,7 @@
             });
         }
 
-        // ... (Translation & Config Helpers) ...
+        // ... (Helpers: Translate, PCM, Format, Config) ...
 
         async function translateMessage(btnElement, text) {
             if (!text) return;
