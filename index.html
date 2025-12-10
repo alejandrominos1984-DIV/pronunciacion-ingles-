@@ -55,10 +55,10 @@
         .chat-scroll::-webkit-scrollbar-track { background: transparent; }
         .chat-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
 
-        /* Message Animations */
+        /* Message Animations - Solo para mensajes finales */
         @keyframes slideIn {
-            from { opacity: 0; transform: translateY(10px) scale(0.98); }
-            to { opacity: 1; transform: translateY(0) scale(1); }
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
         
         .message-enter {
@@ -73,17 +73,6 @@
         }
         .mic-active {
             animation: softPulse 1.5s infinite;
-        }
-
-        /* Typing Dots */
-        .typing-dot {
-            animation: typing 1.4s infinite ease-in-out both;
-        }
-        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
-        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
-        @keyframes typing {
-            0%, 80%, 100% { transform: scale(0); }
-            40% { transform: scale(1); }
         }
 
         /* Audio Wave Animation */
@@ -233,6 +222,7 @@
         let isListening = false;
         let recognition;
         let conversationHistory = [];
+        let previewElement = null; // Store reference to current preview bubble
         
         const SYSTEM_PROMPT = `You are "Teacher Doraly", a professional, warm, and encouraging English teacher. 
         1. CRITICAL: If the user makes ANY grammar, vocabulary, or pronunciation mistake, you MUST start your response with a "CORRECTION:" block.
@@ -245,104 +235,121 @@
 
         // --- Initialization ---
         function init() {
-            setupSpeechRecognition();
             updateVoiceUI();
-            
             if (!GEMINI_API_KEY) {
                 setTimeout(() => toggleConfig(), 800);
             } else {
                 apiKeyInput.value = GEMINI_API_KEY;
             }
-
             conversationHistory.push({ role: "user", parts: [{ text: SYSTEM_PROMPT }] });
             conversationHistory.push({ role: "model", parts: [{ text: "Understood. I am Teacher Doraly. I will listen carefully." }] });
         }
 
-        function setupSpeechRecognition() {
-            if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-                recognition = new SpeechRecognition();
-                recognition.lang = 'en-US';
-                recognition.continuous = true; 
-                recognition.interimResults = true;
-
-                recognition.onstart = () => {
-                    isListening = true;
-                    updateMicState('listening');
-                    // Create temporary preview bubble
-                    createPreviewBubble();
-                };
-
-                recognition.onend = () => {
-                    // Only process if we were actively listening (manual stop)
-                    if (isListening) {
-                        isListening = false;
-                        updateMicState('idle');
-                        
-                        // Process the final text from the bubble
-                        const previewBubble = document.getElementById('previewBubble');
-                        if (previewBubble) {
-                            const text = previewBubble.innerText.trim();
-                            // Remove preview bubble
-                            previewBubble.parentElement.parentElement.remove(); // Remove the entire container
-                            
-                            if (text && text !== "...") {
-                                handleUserInput(text);
-                            }
-                        }
-                    }
-                };
-
-                recognition.onresult = (event) => {
-                    // FIX: Rebuild transcript from scratch to prevent duplication "hello hello"
-                    let fullTranscript = "";
-                    
-                    for (let i = 0; i < event.results.length; ++i) {
-                        fullTranscript += event.results[i][0].transcript;
-                    }
-
-                    // Update the preview bubble in the chat
-                    const previewBubble = document.getElementById('previewBubble');
-                    if (previewBubble) {
-                        previewBubble.innerText = fullTranscript || "...";
-                        chatContainer.scrollTo({ top: chatContainer.scrollHeight, behavior: 'smooth' });
-                    }
-                    
-                    statusText.textContent = "Escuchando...";
-                };
-
-                recognition.onerror = (event) => {
-                    console.error("Speech Error", event);
-                    if (event.error !== 'no-speech') {
-                         updateMicState('idle');
-                         statusText.textContent = "Error. Intenta de nuevo.";
-                         const previewBubble = document.getElementById('previewBubble');
-                         if(previewBubble) previewBubble.parentElement.parentElement.remove();
-                    }
-                };
-            } else {
-                alert("Speech recognition not supported on this browser.");
+        // --- Speech Recognition Logic ---
+        
+        // SOLUCIÓN CLAVE: Crear una nueva instancia cada vez para evitar duplicados en Android
+        function startNewRecognition() {
+            if (recognition) {
+                recognition.abort(); // Matar instancia anterior
+                recognition = null;
             }
+            
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRecognition) {
+                alert("Tu navegador no soporta reconocimiento de voz. Usa Chrome o Safari.");
+                return;
+            }
+
+            recognition = new SpeechRecognition();
+            recognition.lang = 'en-US';
+            recognition.continuous = true; 
+            recognition.interimResults = true;
+
+            recognition.onstart = () => {
+                isListening = true;
+                updateMicState('listening');
+                createPreviewBubble(); // Crear burbuja vacía
+            };
+
+            recognition.onend = () => {
+                // Si se detiene pero seguíamos "escuchando", procesar lo que tenemos
+                if (isListening) {
+                    stopAndSend();
+                }
+            };
+
+            recognition.onresult = (event) => {
+                let fullTranscript = "";
+                
+                // Reconstruir SIEMPRE desde cero para evitar duplicados
+                for (let i = 0; i < event.results.length; ++i) {
+                    fullTranscript += event.results[i][0].transcript;
+                }
+
+                // Actualizar la burbuja existente
+                if (previewElement) {
+                    previewElement.innerText = fullTranscript || "...";
+                    // Auto-scroll suave
+                    chatContainer.scrollTo({ top: chatContainer.scrollHeight, behavior: 'smooth' });
+                }
+            };
+
+            recognition.onerror = (event) => {
+                console.error("Speech Error", event);
+                if (event.error === 'not-allowed') {
+                    alert("Permiso de micrófono denegado.");
+                    updateMicState('idle');
+                    removePreviewBubble();
+                    isListening = false;
+                } else if (event.error !== 'no-speech') {
+                    // Si es un error técnico, intentamos limpiar
+                    // Pero mantenemos silencio en errores menores
+                }
+            };
+
+            recognition.start();
         }
 
-        // --- Logic ---
-        
+        // --- Main Control ---
+
         micBtn.addEventListener('click', () => {
             if (!GEMINI_API_KEY) return toggleConfig();
             
             if (isListening) {
-                recognition.stop(); 
-                // isListening will be set false in onend
+                // DETENER MANUALMENTE
+                stopAndSend();
             } else {
-                recognition.start();
+                // INICIAR
+                startNewRecognition();
             }
         });
 
-        async function handleUserInput(text) {
-            if (!text.trim()) return;
+        function stopAndSend() {
+            isListening = false;
+            if (recognition) recognition.stop();
             
+            // Obtener texto de la burbuja
+            let text = "";
+            if (previewElement) {
+                text = previewElement.innerText.trim();
+                if (text === "...") text = "";
+            }
+
+            if (text.length > 0) {
+                // Transformar burbuja de preview en mensaje definitivo
+                finalizePreviewBubble(); 
+                handleUserInput(text);
+            } else {
+                // Si no se dijo nada, borrar burbuja y volver a idle
+                removePreviewBubble();
+                updateMicState('idle');
+            }
+        }
+
+        // --- Chat Logic ---
+
+        async function handleUserInput(text) {
             updateMicState('processing');
-            addMessage(text, true); 
             
             conversationHistory.push({ role: "user", parts: [{ text: text }] });
 
@@ -427,8 +434,93 @@
             });
         }
 
-        // --- Translation & Helpers ---
-        
+        // --- Preview Bubble Helpers ---
+
+        function createPreviewBubble() {
+            // Eliminar anterior si existe por error
+            removePreviewBubble();
+
+            const div = document.createElement('div');
+            // NO animation class ('message-enter') to make it instant
+            div.className = "flex gap-3 w-full flex-row-reverse"; 
+            div.id = "previewContainer";
+            div.innerHTML = `
+                <div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center shrink-0 mt-1 text-blue-400 font-bold text-xs animate-pulse">
+                    ...
+                </div>
+                <div class="relative group max-w-[85%]">
+                    <div class="bg-blue-50 text-blue-800 p-4 rounded-2xl rounded-tr-none text-[15px] leading-relaxed shadow-inner border border-blue-100">
+                        <span id="previewText">...</span>
+                    </div>
+                </div>
+            `;
+            chatContainer.appendChild(div);
+            previewElement = div.querySelector('#previewText');
+            chatContainer.scrollTo({ top: chatContainer.scrollHeight, behavior: 'smooth' });
+        }
+
+        function finalizePreviewBubble() {
+            const container = document.getElementById('previewContainer');
+            if (container) {
+                // Convertir visualmente la burbuja temporal en la definitiva (Azul Fuerte)
+                // Reemplazamos el HTML interno para que coincida con el estilo "TÚ"
+                const text = previewElement.innerText;
+                const safeText = text.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                
+                container.innerHTML = `
+                    <div class="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center shrink-0 mt-1 shadow-lg shadow-blue-500/30 text-white font-bold text-xs">
+                        TÚ
+                    </div>
+                    <div class="relative group max-w-[85%]">
+                        <div class="bg-blue-600 text-white p-4 rounded-2xl rounded-tr-none text-[15px] leading-relaxed shadow-md shadow-blue-500/10 pb-8">
+                            ${text}
+                        </div>
+                        <button onclick="translateMessage(this, '${safeText}')" class="absolute -bottom-3 left-2 bg-white border border-slate-100 shadow-md rounded-full px-3 py-1.5 text-[11px] font-semibold text-blue-600 flex items-center gap-1.5 hover:bg-slate-50 transition-colors z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 cursor-pointer">
+                            <i class="fas fa-language text-blue-500 text-sm"></i> Traducir
+                        </button>
+                    </div>
+                `;
+                container.id = ""; // Remove ID so it's permanent
+                previewElement = null;
+            }
+        }
+
+        function removePreviewBubble() {
+            const container = document.getElementById('previewContainer');
+            if (container) container.remove();
+            previewElement = null;
+        }
+
+        function addMessage(content, isUser, isHtml = false, rawTextForTranslation = null) {
+            // Solo usar para mensajes del BOT, ya que el usuario usa el finalizePreviewBubble
+            if (isUser) return; 
+
+            const textToTranslate = rawTextForTranslation || content.replace(/<[^>]*>?/gm, '');
+            const safeText = textToTranslate.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+
+            const div = document.createElement('div');
+            div.className = "flex gap-3 message-enter w-full";
+            
+            div.innerHTML = `
+                <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&h=100&fit=crop&crop=faces&q=80" 
+                        class="w-8 h-8 rounded-full object-cover mt-1 border border-slate-100 shadow-sm shrink-0">
+                <div class="relative group max-w-[85%]">
+                    <div class="bg-white text-slate-700 p-4 rounded-2xl rounded-tl-none text-[15px] leading-relaxed border border-slate-100 shadow-sm pb-8">
+                        ${isHtml ? content : content}
+                    </div>
+                    <button onclick="translateMessage(this, '${safeText}')" class="absolute -bottom-3 right-2 bg-white border border-slate-200 shadow-sm rounded-full px-3 py-1.5 text-[11px] font-semibold text-slate-600 flex items-center gap-1.5 hover:text-blue-600 hover:border-blue-200 transition-all z-10 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-200 cursor-pointer">
+                        <i class="fas fa-language text-blue-500 text-sm"></i> Traducir
+                    </button>
+                </div>
+            `;
+            
+            chatContainer.appendChild(div);
+            requestAnimationFrame(() => {
+                chatContainer.scrollTo({ top: chatContainer.scrollHeight, behavior: 'smooth' });
+            });
+        }
+
+        // ... (Remaining Translation, Helpers & Config functions unchanged) ...
         async function translateMessage(btnElement, text) {
             if (!text) return;
             const originalBtnContent = btnElement.innerHTML;
@@ -511,8 +603,6 @@
             }
         }
 
-        // --- UI Updates ---
-
         function updateMicState(state) {
             micBtn.className = "w-16 h-16 rounded-full flex items-center justify-center transition-all z-10 relative group ring-4 ring-white cursor-pointer ";
             const icon = micBtn.querySelector('i');
@@ -523,7 +613,7 @@
                 statusLabel.className = "text-xs font-bold text-red-500 uppercase tracking-wider mb-0.5";
                 statusLabel.textContent = "GRABANDO";
                 statusText.className = "text-sm font-medium text-slate-800";
-                statusText.textContent = "Escuchando..."; // Updated Text
+                statusText.textContent = "Escuchando..."; // Texto Corregido
             } else if (state === 'processing') {
                 micBtn.className += "bg-slate-200 cursor-wait scale-90";
                 icon.className = "fas fa-circle-notch text-slate-500 text-2xl animate-spin";
@@ -539,70 +629,7 @@
                 statusText.className = "text-sm font-medium text-slate-600";
             }
         }
-
-        function createPreviewBubble() {
-            const div = document.createElement('div');
-            div.className = "flex gap-3 message-enter w-full opacity-80";
-            div.innerHTML = `
-                <div class="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center shrink-0 mt-1 text-slate-400 text-xs font-bold">
-                    ...
-                </div>
-                <div class="relative group max-w-[85%]">
-                    <div class="bg-slate-100 text-slate-600 p-4 rounded-2xl rounded-tr-none text-[15px] leading-relaxed shadow-inner">
-                        <span id="previewBubble">...</span>
-                        <span class="inline-block w-2 h-2 bg-slate-400 rounded-full animate-pulse ml-1"></span>
-                    </div>
-                </div>
-            `;
-            // Add to chat but float right like user
-            div.classList.add('flex-row-reverse');
-            chatContainer.appendChild(div);
-            chatContainer.scrollTo({ top: chatContainer.scrollHeight, behavior: 'smooth' });
-        }
-
-        function addMessage(content, isUser, isHtml = false, rawTextForTranslation = null) {
-            const textToTranslate = rawTextForTranslation || content.replace(/<[^>]*>?/gm, '');
-            const safeText = textToTranslate.replace(/'/g, "\\'").replace(/"/g, '&quot;');
-
-            const div = document.createElement('div');
-            div.className = "flex gap-3 message-enter w-full";
-            
-            if (isUser) {
-                div.className += " flex-row-reverse";
-                div.innerHTML = `
-                    <div class="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center shrink-0 mt-1 shadow-lg shadow-blue-500/30 text-white font-bold text-xs">
-                        TÚ
-                    </div>
-                    <div class="relative group max-w-[85%]">
-                        <div class="bg-blue-600 text-white p-4 rounded-2xl rounded-tr-none text-[15px] leading-relaxed shadow-md shadow-blue-500/10 pb-8">
-                            ${content}
-                        </div>
-                        <button onclick="translateMessage(this, '${safeText}')" class="absolute -bottom-3 left-2 bg-white border border-slate-100 shadow-md rounded-full px-3 py-1.5 text-[11px] font-semibold text-blue-600 flex items-center gap-1.5 hover:bg-slate-50 transition-colors z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 cursor-pointer">
-                            <i class="fas fa-language text-blue-500 text-sm"></i> Traducir
-                        </button>
-                    </div>
-                `;
-            } else {
-                div.innerHTML = `
-                    <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&h=100&fit=crop&crop=faces&q=80" 
-                         class="w-8 h-8 rounded-full object-cover mt-1 border border-slate-100 shadow-sm shrink-0">
-                    <div class="relative group max-w-[85%]">
-                        <div class="bg-white text-slate-700 p-4 rounded-2xl rounded-tl-none text-[15px] leading-relaxed border border-slate-100 shadow-sm pb-8">
-                            ${isHtml ? content : content}
-                        </div>
-                        <button onclick="translateMessage(this, '${safeText}')" class="absolute -bottom-3 right-2 bg-white border border-slate-200 shadow-sm rounded-full px-3 py-1.5 text-[11px] font-semibold text-slate-600 flex items-center gap-1.5 hover:text-blue-600 hover:border-blue-200 transition-all z-10 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-200 cursor-pointer">
-                            <i class="fas fa-language text-blue-500 text-sm"></i> Traducir
-                        </button>
-                    </div>
-                `;
-            }
-            
-            chatContainer.appendChild(div);
-            requestAnimationFrame(() => {
-                chatContainer.scrollTo({ top: chatContainer.scrollHeight, behavior: 'smooth' });
-            });
-        }
-
+        
         function formatResponse(text) {
             if (text.includes('CORRECTION:')) {
                 let parts = text.split('\n');
@@ -665,7 +692,6 @@
             }
         }
 
-        // Start App
         init();
     </script>
 </body>
