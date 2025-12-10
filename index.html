@@ -5,201 +5,251 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="theme-color" content="#2563eb">
-    <title>English AI Tutor</title>
+    <meta name="theme-color" content="#ffffff">
+    <title>AI English Tutor Pro</title>
     
-    <!-- Tailwind CSS (CDN for Speed/Simplicity) -->
+    <!-- Fonts: Inter for Professional Look -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    
     <!-- FontAwesome -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                            900: '#0c4a6e',
+                        }
+                    },
+                    boxShadow: {
+                        'soft': '0 4px 20px -2px rgba(0, 0, 0, 0.05)',
+                        'glow': '0 0 15px rgba(14, 165, 233, 0.3)',
+                    }
+                }
+            }
+        }
+    </script>
+
     <style>
         body {
-            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-            background-color: #f0f2f5;
-            overscroll-behavior: none; /* Prevent pull-to-refresh on mobile */
+            background-color: #f8fafc;
+            overscroll-behavior: none;
         }
-        .chat-container {
-            -webkit-overflow-scrolling: touch;
-        }
-        .chat-bubble {
-            max-width: 85%;
-            padding: 14px 18px;
-            border-radius: 1.2rem;
-            margin-bottom: 12px;
-            position: relative;
-            line-height: 1.5;
-            font-size: 0.95rem;
-            animation: fadeIn 0.3s ease-out;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
-        }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
+        
+        /* Smooth Scrollbar */
+        .chat-scroll::-webkit-scrollbar { width: 4px; }
+        .chat-scroll::-webkit-scrollbar-track { background: transparent; }
+        .chat-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+
+        /* Message Animations */
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(8px); }
             to { opacity: 1; transform: translateY(0); }
         }
-        .user-msg {
-            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-            color: white;
-            align-self: flex-end;
-            border-bottom-right-radius: 0.2rem;
+        
+        .message-enter {
+            animation: slideIn 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
         }
-        .bot-msg {
-            background-color: white;
-            color: #1f2937;
-            align-self: flex-start;
-            border-bottom-left-radius: 0.2rem;
+
+        /* Audio Wave Animation */
+        .playing-audio .wave-bar {
+            animation: wave 1s ease-in-out infinite;
         }
-        .correction {
-            background-color: #fffbeb;
-            color: #92400e;
-            font-size: 0.9em;
-            padding: 10px;
-            border-radius: 8px;
-            margin-bottom: 8px;
-            border-left: 4px solid #f59e0b;
+        @keyframes wave {
+            0%, 100% { height: 4px; }
+            50% { height: 12px; }
         }
-        .pulse-ring {
-            box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
-            animation: pulse-ring 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+
+        /* Typing Indicator */
+        .typing-dot {
+            animation: typing 1.4s infinite ease-in-out both;
         }
-        @keyframes pulse-ring {
-            70% { box-shadow: 0 0 0 15px rgba(239, 68, 68, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+        @keyframes typing {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1); }
         }
-        /* Custom Scrollbar */
-        ::-webkit-scrollbar { width: 5px; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
     </style>
 </head>
-<body class="h-[100dvh] flex flex-col items-center justify-center p-0 md:p-4 fixed w-full top-0 left-0">
+<body class="h-[100dvh] flex flex-col items-center justify-center text-slate-800 antialiased">
 
-    <!-- Settings Modal -->
-    <div id="configPanel" class="hidden absolute z-50 inset-0 bg-black/50 flex items-center justify-center p-4 backdrop-blur-sm">
-        <div class="bg-white w-full max-w-sm rounded-2xl shadow-2xl p-6 transform transition-all scale-100">
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="text-lg font-bold text-gray-800">⚙️ Configuración</h2>
-                <button onclick="toggleConfig()" class="text-gray-400 hover:text-gray-600">
-                    <i class="fas fa-times text-xl"></i>
+    <!-- Config Modal -->
+    <div id="configPanel" class="hidden absolute z-50 inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 transition-opacity duration-300">
+        <div class="bg-white w-full max-w-sm rounded-2xl shadow-2xl p-6 transform transition-all scale-100 border border-slate-100">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-bold text-slate-800 tracking-tight">Settings</h2>
+                <button onclick="toggleConfig()" class="w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-400 transition">
+                    <i class="fas fa-times"></i>
                 </button>
             </div>
             
-            <div class="space-y-4">
+            <div class="space-y-5">
                 <div>
-                    <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Gemini API Key</label>
-                    <input type="password" id="apiKeyInput" placeholder="Pega tu clave aquí..." class="w-full p-3 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-gray-50">
-                    <p class="text-xs text-gray-400 mt-1">Se guarda solo en tu navegador.</p>
+                    <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Gemini API Key</label>
+                    <input type="password" id="apiKeyInput" placeholder="Paste your key here..." class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-brand-500 focus:border-transparent outline-none transition-all">
+                    <p class="text-[10px] text-slate-400 mt-1.5 flex items-center gap-1">
+                        <i class="fas fa-lock"></i> Stored securely in your browser
+                    </p>
                 </div>
                 
                 <div>
-                    <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Voz del Tutor</label>
-                    <select id="voiceSelect" class="w-full p-3 border rounded-lg text-sm bg-gray-50">
-                        <option value="">Cargando voces...</option>
-                    </select>
+                    <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">AI Voice</label>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button onclick="selectVoice('Kore')" id="voice-Kore" class="voice-btn p-3 rounded-xl border border-slate-200 text-sm font-medium hover:border-brand-500 hover:bg-brand-50 transition-all text-left flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-pink-400"></span> Kore (Fem)
+                        </button>
+                        <button onclick="selectVoice('Fenrir')" id="voice-Fenrir" class="voice-btn p-3 rounded-xl border border-slate-200 text-sm font-medium hover:border-brand-500 hover:bg-brand-50 transition-all text-left flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-indigo-500"></span> Fenrir (Masc)
+                        </button>
+                        <button onclick="selectVoice('Puck')" id="voice-Puck" class="voice-btn p-3 rounded-xl border border-slate-200 text-sm font-medium hover:border-brand-500 hover:bg-brand-50 transition-all text-left flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-blue-400"></span> Puck (Masc)
+                        </button>
+                        <button onclick="selectVoice('Aoede')" id="voice-Aoede" class="voice-btn p-3 rounded-xl border border-slate-200 text-sm font-medium hover:border-brand-500 hover:bg-brand-50 transition-all text-left flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-purple-400"></span> Aoede (Fem)
+                        </button>
+                    </div>
                 </div>
 
-                <button onclick="saveAndCloseConfig()" class="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition">
-                    Guardar y Cerrar
+                <button onclick="saveAndCloseConfig()" class="w-full bg-slate-900 text-white py-3.5 rounded-xl font-semibold hover:bg-slate-800 active:scale-[0.98] transition-all shadow-lg shadow-slate-900/20">
+                    Save Changes
                 </button>
-                
-                <div class="mt-4 pt-4 border-t text-center">
-                    <a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-xs text-blue-500 hover:underline">
-                        Obtener API Key gratis de Google
-                    </a>
-                </div>
             </div>
         </div>
     </div>
 
-    <!-- Main App Interface -->
-    <div class="w-full h-full md:h-[650px] md:max-w-md bg-white md:rounded-3xl shadow-2xl overflow-hidden flex flex-col relative">
+    <!-- Main App Container -->
+    <div class="w-full h-full md:h-[700px] md:max-w-[400px] bg-white md:rounded-[2rem] shadow-2xl md:shadow-soft overflow-hidden flex flex-col relative border border-slate-100">
         
         <!-- Header -->
-        <div class="bg-blue-600 p-4 pt-safe-top flex items-center justify-between shrink-0 shadow-md z-10">
+        <div class="bg-white/80 backdrop-blur-md p-4 pt-safe-top flex items-center justify-between border-b border-slate-100 sticky top-0 z-20">
             <div class="flex items-center gap-3">
-                <div class="w-10 h-10 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center text-white font-bold text-lg border border-white/30">
-                    <i class="fas fa-robot"></i>
+                <div class="w-10 h-10 bg-gradient-to-tr from-brand-600 to-indigo-600 rounded-full flex items-center justify-center text-white shadow-lg shadow-brand-500/30">
+                    <i class="fas fa-graduation-cap text-sm"></i>
                 </div>
                 <div>
-                    <h1 class="font-bold text-lg text-white leading-tight">AI English Tutor</h1>
+                    <h1 class="font-bold text-slate-800 text-base leading-tight">English Tutor</h1>
                     <div class="flex items-center gap-1.5">
-                        <span class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
-                        <span class="text-xs text-blue-100 font-medium">Online</span>
+                        <span class="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
+                        <span class="text-[11px] text-slate-400 font-medium tracking-wide">AI ACTIVE</span>
                     </div>
                 </div>
             </div>
-            <div class="flex gap-2">
-                <button onclick="resetChat()" class="w-8 h-8 rounded-full bg-white/10 text-white flex items-center justify-center hover:bg-white/20 transition">
-                    <i class="fas fa-redo-alt text-sm"></i>
-                </button>
-                <button onclick="toggleConfig()" class="w-8 h-8 rounded-full bg-white/10 text-white flex items-center justify-center hover:bg-white/20 transition">
-                    <i class="fas fa-cog text-sm"></i>
-                </button>
-            </div>
+            <button onclick="toggleConfig()" class="w-9 h-9 rounded-full bg-slate-50 hover:bg-slate-100 text-slate-600 flex items-center justify-center transition-colors">
+                <i class="fas fa-sliders-h text-sm"></i>
+            </button>
         </div>
 
         <!-- Chat Area -->
-        <div id="chatContainer" class="flex-1 overflow-y-auto p-4 flex flex-col gap-2 bg-slate-50 chat-container pb-24">
-            <!-- Initial Message -->
-            <div class="bot-msg chat-bubble">
-                Hello! I'm your English tutor. 👋 <br>
-                I'll help you practice conversation and correct your mistakes. Click the microphone to start talking!
+        <div id="chatContainer" class="flex-1 overflow-y-auto p-5 flex flex-col gap-4 bg-white chat-scroll pb-32">
+            <!-- Welcome Message -->
+            <div class="flex gap-3 message-enter">
+                <div class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center shrink-0 mt-1">
+                    <i class="fas fa-robot text-xs text-slate-500"></i>
+                </div>
+                <div class="bg-slate-50 text-slate-700 p-4 rounded-2xl rounded-tl-none max-w-[85%] text-[15px] leading-relaxed border border-slate-100">
+                    Hello! I'm your AI English tutor with a human-like voice. Let's practice! Tap the microphone to speak.
+                </div>
             </div>
         </div>
 
-        <!-- Floating Controls (Better for Mobile) -->
-        <div class="absolute bottom-0 left-0 w-full p-5 bg-gradient-to-t from-white via-white to-transparent pb-safe-bottom">
-            <div class="flex flex-col items-center gap-3">
-                
-                <div id="statusText" class="text-sm text-gray-500 font-medium h-5 transition-all">Ready to listen...</div>
+        <!-- Audio Visualizer (Hidden by default) -->
+        <div id="audioVisualizer" class="absolute bottom-28 left-0 w-full flex justify-center items-center gap-1 h-8 opacity-0 transition-opacity duration-300 pointer-events-none">
+            <div class="wave-bar w-1 bg-brand-500 rounded-full h-1"></div>
+            <div class="wave-bar w-1 bg-brand-500 rounded-full h-2" style="animation-delay: 0.1s"></div>
+            <div class="wave-bar w-1 bg-brand-500 rounded-full h-3" style="animation-delay: 0.2s"></div>
+            <div class="wave-bar w-1 bg-brand-500 rounded-full h-2" style="animation-delay: 0.3s"></div>
+            <div class="wave-bar w-1 bg-brand-500 rounded-full h-1" style="animation-delay: 0.4s"></div>
+        </div>
 
-                <button id="micBtn" class="w-20 h-20 rounded-full bg-blue-600 text-white text-3xl shadow-xl hover:bg-blue-700 active:scale-95 transition-all flex items-center justify-center focus:outline-none z-20">
-                    <i class="fas fa-microphone"></i>
-                </button>
-            </div>
+        <!-- Bottom Controls -->
+        <div class="absolute bottom-0 left-0 w-full bg-white/90 backdrop-blur-xl border-t border-slate-100 p-6 pb-8 flex flex-col items-center gap-4 z-30">
+            
+            <div id="statusText" class="text-xs font-semibold text-slate-400 uppercase tracking-widest transition-all">Tap to speak</div>
+
+            <button id="micBtn" class="group relative w-16 h-16 rounded-full bg-slate-900 text-white shadow-xl shadow-slate-900/20 flex items-center justify-center transition-all hover:scale-105 active:scale-95">
+                <div class="absolute inset-0 rounded-full border border-white/10"></div>
+                <i class="fas fa-microphone text-xl group-hover:text-brand-200 transition-colors"></i>
+            </button>
         </div>
     </div>
 
+    <!-- Hidden Audio Element -->
+    <audio id="audioPlayer" class="hidden"></audio>
+
     <script>
-        // --- State & Config ---
+        // --- Configuration ---
         let GEMINI_API_KEY = localStorage.getItem('gemini_api_key') || "";
+        let SELECTED_VOICE = localStorage.getItem('gemini_voice') || "Kore";
         
+        // --- UI Elements ---
         const chatContainer = document.getElementById('chatContainer');
         const statusText = document.getElementById('statusText');
         const micBtn = document.getElementById('micBtn');
-        const voiceSelect = document.getElementById('voiceSelect');
         const apiKeyInput = document.getElementById('apiKeyInput');
         const configPanel = document.getElementById('configPanel');
+        const audioPlayer = document.getElementById('audioPlayer');
+        const audioVisualizer = document.getElementById('audioVisualizer');
 
+        // --- State ---
         let isListening = false;
         let recognition;
-        let synthesis = window.speechSynthesis;
         let conversationHistory = [];
         
-        const SYSTEM_PROMPT = `You are a friendly, patient English teacher. 
-        1. Keep the conversation natural and engaging.
-        2. CRITICAL: If the user makes a grammar, vocabulary, or pronunciation mistake, START your response with a distinct "Correction:" block explained briefly.
-        3. If there are no mistakes, simply reply to the conversation.
-        4. Keep your conversational replies concise (1-3 sentences).`;
+        // --- Prompts ---
+        const SYSTEM_PROMPT = `You are a professional English tutor. 
+        1. Keep the conversation natural.
+        2. If the user makes a mistake, output a separate paragraph starting with "Correction:" to explain it briefly.
+        3. Then continue the conversation.
+        4. Keep responses short (max 2-3 sentences) so the audio isn't too long.`;
 
         // --- Initialization ---
         function init() {
-            // Setup Speech Recognition
+            setupSpeechRecognition();
+            updateVoiceUI();
+            
+            // Check for key
+            if (!GEMINI_API_KEY) {
+                setTimeout(() => toggleConfig(), 800);
+            } else {
+                apiKeyInput.value = GEMINI_API_KEY;
+            }
+
+            // Init history
+            conversationHistory.push({ role: "user", parts: [{ text: SYSTEM_PROMPT }] });
+            conversationHistory.push({ role: "model", parts: [{ text: "Understood. I'm ready." }] });
+        }
+
+        function setupSpeechRecognition() {
             if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
                 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
                 recognition = new SpeechRecognition();
-                recognition.lang = 'en-US'; 
-                recognition.continuous = false; // Mobile prefers false
+                recognition.lang = 'en-US';
+                recognition.continuous = false;
                 recognition.interimResults = false;
 
                 recognition.onstart = () => {
                     isListening = true;
-                    updateMicUI(true);
-                    statusText.textContent = "Listening...";
+                    updateMicState('listening');
                 };
 
                 recognition.onend = () => {
                     isListening = false;
-                    updateMicUI(false);
+                    // Don't reset UI yet if we are processing
                 };
 
                 recognition.onresult = (event) => {
@@ -208,123 +258,49 @@
                 };
 
                 recognition.onerror = (event) => {
-                    console.error("Speech error", event.error);
-                    statusText.textContent = "Error: " + event.error;
-                    isListening = false;
-                    updateMicUI(false);
+                    console.error("Speech Error", event);
+                    updateMicState('idle');
+                    statusText.textContent = "Please try again";
                 };
             } else {
-                alert("Speech Recognition not supported in this browser. Please use Chrome, Edge, or Safari.");
-                micBtn.disabled = true;
-                micBtn.classList.add('opacity-50');
-            }
-
-            // Load Voices
-            populateVoices();
-            if (speechSynthesis.onvoiceschanged !== undefined) {
-                speechSynthesis.onvoiceschanged = populateVoices;
-            }
-
-            // Init History
-            conversationHistory = [{ role: "user", parts: [{ text: SYSTEM_PROMPT }] }];
-
-            // Check Key
-            if (!GEMINI_API_KEY) {
-                setTimeout(() => toggleConfig(), 1000); // Ask for key if missing
-            } else {
-                apiKeyInput.value = GEMINI_API_KEY;
+                alert("Speech recognition not supported on this browser.");
             }
         }
 
-        // --- UI Functions ---
-        function toggleConfig() {
-            configPanel.classList.toggle('hidden');
-        }
+        // --- Logic ---
 
-        function saveAndCloseConfig() {
-            const key = apiKeyInput.value.trim();
-            if (key) {
-                GEMINI_API_KEY = key;
-                localStorage.setItem('gemini_api_key', key);
-                toggleConfig();
-                alert("Key saved securely in your browser!");
-            } else {
-                alert("Please enter a valid API Key.");
-            }
-        }
-
-        function populateVoices() {
-            const voices = synthesis.getVoices().filter(v => v.lang.includes('en'));
-            voiceSelect.innerHTML = '';
-            voices.forEach((voice) => {
-                const option = document.createElement('option');
-                option.textContent = `${voice.name.slice(0, 30)}...`;
-                option.value = voice.name;
-                // Prefer Google or high quality voices
-                if (voice.name.includes('Google') || voice.name.includes('Premium')) {
-                    option.selected = true;
-                }
-                voiceSelect.appendChild(option);
-            });
-        }
-
-        function updateMicUI(listening) {
-            if (listening) {
-                micBtn.classList.remove('bg-blue-600');
-                micBtn.classList.add('bg-red-500', 'pulse-ring');
-                micBtn.innerHTML = '<i class="fas fa-stop"></i>';
-            } else {
-                micBtn.classList.add('bg-blue-600');
-                micBtn.classList.remove('bg-red-500', 'pulse-ring');
-                micBtn.innerHTML = '<i class="fas fa-microphone"></i>';
-            }
-        }
-
-        function addMessage(text, isUser, isCorrection = false) {
-            const div = document.createElement('div');
-            div.classList.add('chat-bubble');
-            
-            if (isCorrection) {
-                div.classList.add('correction');
-                // Format correction bolding
-                div.innerHTML = text.replace(/(Correction:|Mistake:)/gi, '<strong>$1</strong>');
-            } else {
-                div.classList.add(isUser ? 'user-msg' : 'bot-msg');
-                div.textContent = text;
-            }
-            
-            chatContainer.appendChild(div);
-            // Smooth scroll
-            chatContainer.scrollTo({ top: chatContainer.scrollHeight, behavior: 'smooth' });
-        }
-
-        micBtn.addEventListener('click', () => {
-            if (!GEMINI_API_KEY) {
-                toggleConfig();
-                return;
-            }
-            if (isListening) recognition.stop();
-            else recognition.start();
-        });
-
-        // --- Core Logic ---
         async function handleUserInput(text) {
+            updateMicState('processing');
             addMessage(text, true);
-            statusText.textContent = "Thinking...";
             
             conversationHistory.push({ role: "user", parts: [{ text: text }] });
 
             try {
-                const responseText = await callGeminiAPI();
-                processGeminiResponse(responseText);
+                // 1. Get Text Response
+                const responseText = await callGeminiText();
+                
+                // 2. Process & Display Text
+                const displayHtml = formatResponse(responseText);
+                addMessage(displayHtml, false, true); // true = allow HTML
+                
+                conversationHistory.push({ role: "model", parts: [{ text: responseText }] });
+
+                // 3. Get Audio (TTS)
+                statusText.textContent = "Generating Voice...";
+                // Strip markdown for cleaner reading
+                const textToSpeak = responseText.replace(/\*/g, '').replace(/Correction:/i, 'Correction.'); 
+                await playGeminiTTS(textToSpeak);
+                
+                updateMicState('idle');
+
             } catch (error) {
                 console.error(error);
-                statusText.textContent = "Connection Error";
-                addMessage("Error connecting to Gemini. Check your API Key.", false);
+                addMessage("Error connecting to AI. Please check your API Key.", false);
+                updateMicState('idle');
             }
         }
 
-        async function callGeminiAPI() {
+        async function callGeminiText() {
             const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${GEMINI_API_KEY}`;
             const payload = {
                 contents: conversationHistory,
@@ -337,57 +313,201 @@
                 body: JSON.stringify(payload)
             });
 
-            if (!response.ok) throw new Error('API Error');
+            if (!response.ok) throw new Error('Text API Error');
             const data = await response.json();
             return data.candidates[0].content.parts[0].text;
         }
 
-        function processGeminiResponse(text) {
-            conversationHistory.push({ role: "model", parts: [{ text: text }] });
-            statusText.textContent = "Click mic to reply";
+        async function playGeminiTTS(text) {
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${GEMINI_API_KEY}`;
+            
+            const payload = {
+                contents: [{ parts: [{ text: text }] }],
+                generationConfig: {
+                    responseModalities: ["AUDIO"],
+                    speechConfig: {
+                        voiceConfig: {
+                            prebuiltVoiceConfig: { voiceName: SELECTED_VOICE }
+                        }
+                    }
+                }
+            };
 
-            // Detect correction block
-            const parts = text.split(/\n/);
-            let speechText = text;
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
 
-            // Simple heuristic display
-            // If the AI formatted it well with "Correction:", highlight it
-            if (text.toLowerCase().includes('correction:')) {
-                const correctionPart = parts.find(p => p.toLowerCase().includes('correction:'));
-                const conversationPart = parts.filter(p => !p.toLowerCase().includes('correction:')).join(' ');
+            if (!response.ok) throw new Error('TTS API Error');
+            
+            const data = await response.json();
+            const base64Audio = data.candidates[0].content.parts[0].inlineData.data;
+            
+            // Convert Base64 (PCM) to Wav and play
+            const wavUrl = pcmToWav(base64Audio);
+            
+            return new Promise((resolve) => {
+                audioPlayer.src = wavUrl;
+                audioVisualizer.classList.remove('opacity-0');
+                audioVisualizer.classList.add('playing-audio');
                 
-                if (correctionPart) addMessage(correctionPart, false, true);
-                if (conversationPart.trim()) addMessage(conversationPart, false);
-                speechText = conversationPart; // Only speak the conversation part usually, or both.
+                audioPlayer.onended = () => {
+                    audioVisualizer.classList.add('opacity-0');
+                    audioVisualizer.classList.remove('playing-audio');
+                    resolve();
+                };
+                
+                audioPlayer.play();
+            });
+        }
+
+        // --- Helper: PCM16 to WAV ---
+        // Gemini returns raw PCM 24kHz Mono. We need to wrap it in WAV container.
+        function pcmToWav(base64PCM) {
+            const binaryString = atob(base64PCM);
+            const len = binaryString.length;
+            const bytes = new Uint8Array(len);
+            for (let i = 0; i < len; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+            
+            const wavHeader = new ArrayBuffer(44);
+            const view = new DataView(wavHeader);
+            
+            // RIFF chunk descriptor
+            writeString(view, 0, 'RIFF');
+            view.setUint32(4, 36 + len, true);
+            writeString(view, 8, 'WAVE');
+            
+            // fmt sub-chunk
+            writeString(view, 12, 'fmt ');
+            view.setUint32(16, 16, true); // Subchunk1Size (16 for PCM)
+            view.setUint16(20, 1, true); // AudioFormat (1 for PCM)
+            view.setUint16(22, 1, true); // NumChannels (1 for Mono)
+            view.setUint32(24, 24000, true); // SampleRate (24kHz for Gemini TTS)
+            view.setUint32(28, 24000 * 2, true); // ByteRate
+            view.setUint16(32, 2, true); // BlockAlign
+            view.setUint16(34, 16, true); // BitsPerSample
+            
+            // data sub-chunk
+            writeString(view, 36, 'data');
+            view.setUint32(40, len, true);
+            
+            const blob = new Blob([view, bytes], { type: 'audio/wav' });
+            return URL.createObjectURL(blob);
+        }
+
+        function writeString(view, offset, string) {
+            for (let i = 0; i < string.length; i++) {
+                view.setUint8(offset + i, string.charCodeAt(i));
+            }
+        }
+
+        // --- UI Helpers ---
+
+        function updateMicState(state) {
+            // Reset classes
+            micBtn.className = "group relative w-16 h-16 rounded-full transition-all flex items-center justify-center shadow-xl ";
+            
+            if (state === 'listening') {
+                micBtn.className += "bg-red-500 scale-110 shadow-red-500/40";
+                micBtn.innerHTML = '<i class="fas fa-stop text-white text-xl animate-pulse"></i>';
+                statusText.textContent = "Listening...";
+                statusText.className = "text-xs font-bold text-red-500 uppercase tracking-widest";
+            } else if (state === 'processing') {
+                micBtn.className += "bg-slate-200 cursor-wait";
+                micBtn.innerHTML = '<i class="fas fa-circle-notch text-slate-500 text-xl animate-spin"></i>';
+                statusText.textContent = "Thinking...";
+                statusText.className = "text-xs font-semibold text-slate-400 uppercase tracking-widest";
+            } else { // Idle
+                micBtn.className += "bg-slate-900 hover:scale-105 active:scale-95 shadow-slate-900/20";
+                micBtn.innerHTML = '<div class="absolute inset-0 rounded-full border border-white/10"></div><i class="fas fa-microphone text-xl text-white group-hover:text-brand-200"></i>';
+                statusText.textContent = "Tap to speak";
+                statusText.className = "text-xs font-semibold text-slate-400 uppercase tracking-widest";
+            }
+        }
+
+        function addMessage(content, isUser, isHtml = false) {
+            const div = document.createElement('div');
+            div.className = "flex gap-3 message-enter";
+            
+            if (isUser) {
+                div.className += " flex-row-reverse";
+                div.innerHTML = `
+                    <div class="w-8 h-8 rounded-full bg-brand-500 flex items-center justify-center shrink-0 mt-1 shadow-lg shadow-brand-500/30">
+                        <i class="fas fa-user text-xs text-white"></i>
+                    </div>
+                    <div class="bg-brand-600 text-white p-4 rounded-2xl rounded-tr-none max-w-[85%] text-[15px] leading-relaxed shadow-md shadow-brand-500/10">
+                        ${content}
+                    </div>
+                `;
             } else {
-                addMessage(text, false);
+                div.innerHTML = `
+                    <div class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center shrink-0 mt-1">
+                        <i class="fas fa-robot text-xs text-slate-500"></i>
+                    </div>
+                    <div class="bg-white text-slate-700 p-4 rounded-2xl rounded-tl-none max-w-[85%] text-[15px] leading-relaxed border border-slate-100 shadow-sm">
+                        ${isHtml ? content : content}
+                    </div>
+                `;
             }
-
-            speakText(text); // Speak everything for full learning
+            
+            chatContainer.appendChild(div);
+            chatContainer.scrollTo({ top: chatContainer.scrollHeight, behavior: 'smooth' });
         }
 
-        function speakText(text) {
-            if (synthesis.speaking) synthesis.cancel();
-            
-            // Cleanup text for TTS (remove markdown chars)
-            const cleanText = text.replace(/[*_#]/g, ''); 
-            
-            const utterance = new SpeechSynthesisUtterance(cleanText);
-            const voices = synthesis.getVoices();
-            const selectedName = voiceSelect.value;
-            const selectedVoice = voices.find(v => v.name === selectedName);
-            
-            if (selectedVoice) utterance.voice = selectedVoice;
-            utterance.rate = 0.9;
-            
-            synthesis.speak(utterance);
+        function formatResponse(text) {
+            // Styling for "Correction:" block
+            if (text.toLowerCase().includes('correction:')) {
+                return text.replace(/(Correction:[\s\S]*?)(\n\n|\n|$)/gi, 
+                    `<div class="bg-amber-50 border-l-4 border-amber-400 p-3 rounded-r-lg mb-3 text-amber-900 text-sm">
+                        <strong class="block text-amber-600 mb-1 text-xs uppercase tracking-wide">Correction</strong>
+                        $1
+                     </div>`
+                ).replace(/Correction:/gi, '');
+            }
+            return text;
         }
 
-        function resetChat() {
-            if(confirm("Start new conversation?")) {
-                location.reload();
+        function toggleConfig() {
+            configPanel.classList.toggle('hidden');
+        }
+
+        function saveAndCloseConfig() {
+            const key = apiKeyInput.value.trim();
+            if (key) {
+                GEMINI_API_KEY = key;
+                localStorage.setItem('gemini_api_key', key);
+                localStorage.setItem('gemini_voice', SELECTED_VOICE);
+                toggleConfig();
+            } else {
+                alert("Please enter a valid API Key.");
             }
         }
+
+        function selectVoice(voiceName) {
+            SELECTED_VOICE = voiceName;
+            updateVoiceUI();
+        }
+
+        function updateVoiceUI() {
+            document.querySelectorAll('.voice-btn').forEach(btn => {
+                btn.classList.remove('border-brand-500', 'bg-brand-50', 'ring-1', 'ring-brand-500');
+                btn.classList.add('border-slate-200');
+            });
+            const selectedBtn = document.getElementById(`voice-${SELECTED_VOICE}`);
+            if (selectedBtn) {
+                selectedBtn.classList.remove('border-slate-200');
+                selectedBtn.classList.add('border-brand-500', 'bg-brand-50', 'ring-1', 'ring-brand-500');
+            }
+        }
+
+        micBtn.addEventListener('click', () => {
+            if (!GEMINI_API_KEY) return toggleConfig();
+            if (isListening) recognition.stop();
+            else recognition.start();
+        });
 
         init();
     </script>
