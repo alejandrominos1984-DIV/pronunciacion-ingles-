@@ -55,7 +55,7 @@
         .chat-scroll::-webkit-scrollbar-track { background: transparent; }
         .chat-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
 
-        /* Message Animations - Solo para mensajes finales */
+        /* Message Animations - Solo para mensajes confirmados */
         @keyframes slideIn {
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
@@ -222,7 +222,10 @@
         let isListening = false;
         let recognition;
         let conversationHistory = [];
-        let previewElement = null; // Store reference to current preview bubble
+        let previewElement = null; 
+        
+        // Variables for the "Anti-Duplicate" logic
+        let sessionTranscript = ""; // Accumulates finalized text segments
         
         const SYSTEM_PROMPT = `You are "Teacher Doraly", a professional, warm, and encouraging English teacher. 
         1. CRITICAL: If the user makes ANY grammar, vocabulary, or pronunciation mistake, you MUST start your response with a "CORRECTION:" block.
@@ -245,69 +248,82 @@
             conversationHistory.push({ role: "model", parts: [{ text: "Understood. I am Teacher Doraly. I will listen carefully." }] });
         }
 
-        // --- Speech Recognition Logic ---
+        // --- Speech Recognition Logic (Revised for Android No-Dupes) ---
         
-        // SOLUCIÓN CLAVE: Crear una nueva instancia cada vez para evitar duplicados en Android
         function startNewRecognition() {
             if (recognition) {
-                recognition.abort(); // Matar instancia anterior
+                recognition.abort();
                 recognition = null;
             }
             
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             if (!SpeechRecognition) {
-                alert("Tu navegador no soporta reconocimiento de voz. Usa Chrome o Safari.");
+                alert("Browser not supported. Use Chrome.");
                 return;
             }
 
             recognition = new SpeechRecognition();
             recognition.lang = 'en-US';
-            recognition.continuous = true; 
+            // CRITICAL FIX: continuous = false forces Android to flush buffer every sentence.
+            // We will manually restart it in onend to emulate "continuous" behavior.
+            recognition.continuous = false; 
             recognition.interimResults = true;
 
             recognition.onstart = () => {
-                isListening = true;
-                updateMicState('listening');
-                createPreviewBubble(); // Crear burbuja vacía
+                // Only update UI if we are officially "listening" (first start)
+                if (isListening) {
+                    updateMicState('listening');
+                    if (!previewElement) createPreviewBubble();
+                }
             };
 
             recognition.onend = () => {
-                // Si se detiene pero seguíamos "escuchando", procesar lo que tenemos
+                // If the user hasn't pressed stop manually, we restart immediately.
+                // This "loop" prevents the Android buffer from getting full and repeating text.
                 if (isListening) {
+                    recognition.start();
+                } else {
+                    // User pressed stop manually -> Finalize
                     stopAndSend();
                 }
             };
 
             recognition.onresult = (event) => {
-                let fullTranscript = "";
-                
-                // Reconstruir SIEMPRE desde cero para evitar duplicados
-                for (let i = 0; i < event.results.length; ++i) {
-                    fullTranscript += event.results[i][0].transcript;
+                let currentChunk = "";
+                for (let i = event.resultIndex; i < event.results.length; ++i) {
+                    if (event.results[i].isFinal) {
+                        // Append to our session accumulator
+                        sessionTranscript += event.results[i][0].transcript + " ";
+                    } else {
+                        currentChunk += event.results[i][0].transcript;
+                    }
                 }
 
-                // Actualizar la burbuja existente
+                // Display: Accumulator + Current Interim
+                const display = (sessionTranscript + currentChunk).trim();
+                
                 if (previewElement) {
-                    previewElement.innerText = fullTranscript || "...";
-                    // Auto-scroll suave
+                    previewElement.innerText = display || "...";
                     chatContainer.scrollTo({ top: chatContainer.scrollHeight, behavior: 'smooth' });
                 }
             };
 
             recognition.onerror = (event) => {
+                // Ignore benign errors
+                if (event.error === 'no-speech') return;
+                
                 console.error("Speech Error", event);
                 if (event.error === 'not-allowed') {
-                    alert("Permiso de micrófono denegado.");
-                    updateMicState('idle');
-                    removePreviewBubble();
-                    isListening = false;
-                } else if (event.error !== 'no-speech') {
-                    // Si es un error técnico, intentamos limpiar
-                    // Pero mantenemos silencio en errores menores
+                    alert("Microphone blocked.");
+                    stopManually();
                 }
             };
 
-            recognition.start();
+            try {
+                recognition.start();
+            } catch (e) {
+                console.error("Start error", e);
+            }
         }
 
         // --- Main Control ---
@@ -316,32 +332,39 @@
             if (!GEMINI_API_KEY) return toggleConfig();
             
             if (isListening) {
-                // DETENER MANUALMENTE
-                stopAndSend();
+                // STOPPING
+                stopManually();
             } else {
-                // INICIAR
+                // STARTING
+                isListening = true;
+                sessionTranscript = ""; // Reset buffer
                 startNewRecognition();
             }
         });
 
-        function stopAndSend() {
-            isListening = false;
+        function stopManually() {
+            isListening = false; // This flag stops the loop in onend
             if (recognition) recognition.stop();
-            
-            // Obtener texto de la burbuja
-            let text = "";
-            if (previewElement) {
-                text = previewElement.innerText.trim();
-                if (text === "...") text = "";
-            }
+            // Finalize happens in onend or we can force it here if needed, 
+            // but usually onend fires shortly after stop().
+            // Let's force UI update here to feel responsive.
+            updateMicState('processing');
+        }
 
-            if (text.length > 0) {
-                // Transformar burbuja de preview en mensaje definitivo
-                finalizePreviewBubble(); 
-                handleUserInput(text);
+        function stopAndSend() {
+            updateMicState('processing');
+            if (previewElement) {
+                let text = previewElement.innerText.trim();
+                if (text === "...") text = "";
+                
+                if (text.length > 0) {
+                    finalizePreviewBubble(); 
+                    handleUserInput(text);
+                } else {
+                    removePreviewBubble();
+                    updateMicState('idle');
+                }
             } else {
-                // Si no se dijo nada, borrar burbuja y volver a idle
-                removePreviewBubble();
                 updateMicState('idle');
             }
         }
@@ -349,7 +372,7 @@
         // --- Chat Logic ---
 
         async function handleUserInput(text) {
-            updateMicState('processing');
+            if (!text.trim()) return;
             
             conversationHistory.push({ role: "user", parts: [{ text: text }] });
 
@@ -437,11 +460,10 @@
         // --- Preview Bubble Helpers ---
 
         function createPreviewBubble() {
-            // Eliminar anterior si existe por error
             removePreviewBubble();
 
             const div = document.createElement('div');
-            // NO animation class ('message-enter') to make it instant
+            // Remove 'message-enter' for instant appearance
             div.className = "flex gap-3 w-full flex-row-reverse"; 
             div.id = "previewContainer";
             div.innerHTML = `
@@ -449,7 +471,7 @@
                     ...
                 </div>
                 <div class="relative group max-w-[85%]">
-                    <div class="bg-blue-50 text-blue-800 p-4 rounded-2xl rounded-tr-none text-[15px] leading-relaxed shadow-inner border border-blue-100">
+                    <div class="bg-blue-50 text-blue-800 p-4 rounded-2xl rounded-tr-none text-[15px] leading-relaxed shadow-inner border border-blue-100 transition-all">
                         <span id="previewText">...</span>
                     </div>
                 </div>
@@ -462,8 +484,6 @@
         function finalizePreviewBubble() {
             const container = document.getElementById('previewContainer');
             if (container) {
-                // Convertir visualmente la burbuja temporal en la definitiva (Azul Fuerte)
-                // Reemplazamos el HTML interno para que coincida con el estilo "TÚ"
                 const text = previewElement.innerText;
                 const safeText = text.replace(/'/g, "\\'").replace(/"/g, '&quot;');
                 
@@ -480,7 +500,7 @@
                         </button>
                     </div>
                 `;
-                container.id = ""; // Remove ID so it's permanent
+                container.id = ""; 
                 previewElement = null;
             }
         }
@@ -492,8 +512,7 @@
         }
 
         function addMessage(content, isUser, isHtml = false, rawTextForTranslation = null) {
-            // Solo usar para mensajes del BOT, ya que el usuario usa el finalizePreviewBubble
-            if (isUser) return; 
+            if (isUser) return; // Users use preview bubble
 
             const textToTranslate = rawTextForTranslation || content.replace(/<[^>]*>?/gm, '');
             const safeText = textToTranslate.replace(/'/g, "\\'").replace(/"/g, '&quot;');
@@ -520,7 +539,8 @@
             });
         }
 
-        // ... (Remaining Translation, Helpers & Config functions unchanged) ...
+        // ... (Translation & Config Helpers) ...
+
         async function translateMessage(btnElement, text) {
             if (!text) return;
             const originalBtnContent = btnElement.innerHTML;
@@ -613,7 +633,7 @@
                 statusLabel.className = "text-xs font-bold text-red-500 uppercase tracking-wider mb-0.5";
                 statusLabel.textContent = "GRABANDO";
                 statusText.className = "text-sm font-medium text-slate-800";
-                statusText.textContent = "Escuchando..."; // Texto Corregido
+                statusText.textContent = "Escuchando..."; 
             } else if (state === 'processing') {
                 micBtn.className += "bg-slate-200 cursor-wait scale-90";
                 icon.className = "fas fa-circle-notch text-slate-500 text-2xl animate-spin";
