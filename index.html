@@ -141,12 +141,11 @@
                 <div>
                     <h1 class="font-bold text-slate-800 text-lg leading-tight">Teacher Doraly</h1>
                     <div class="flex items-center gap-1.5">
-                        <!-- Updated to Blue as requested -->
                         <span class="text-xs text-blue-600 font-bold bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-100">English Teacher</span>
                     </div>
                 </div>
             </div>
-            <button onclick="toggleConfig()" class="w-10 h-10 rounded-full hover:bg-slate-50 text-slate-400 hover:text-slate-600 flex items-center justify-center transition-all">
+            <button onclick="toggleConfig()" class="w-10 h-10 rounded-full hover:bg-slate-50 text-slate-400 hover:text-slate-600 flex items-center justify-center transition-all cursor-pointer z-50">
                 <i class="fas fa-sliders-h"></i>
             </button>
         </div>
@@ -161,7 +160,6 @@
                     <div class="bg-white text-slate-700 p-4 rounded-2xl rounded-tl-none text-[15px] leading-relaxed border border-slate-100 shadow-sm pb-8">
                         Hello! I'm Teacher Doraly. I'm here to help you improve your English. I'll listen carefully and correct your mistakes. Let's talk!
                     </div>
-                    <!-- Updated Translate Button with Blue Icon -->
                     <button onclick="translateMessage(this, 'Hello! I am Teacher Doraly. I am here to help you improve your English. I will listen carefully and correct your mistakes. Let\'s talk!')" 
                             class="absolute -bottom-3 right-2 bg-white border border-slate-200 shadow-sm rounded-full px-3 py-1.5 text-[11px] font-semibold text-slate-600 flex items-center gap-1.5 hover:text-blue-600 hover:border-blue-200 transition-all z-10 cursor-pointer group-hover:shadow-md">
                         <i class="fas fa-language text-blue-500 text-sm"></i> Traducir
@@ -175,7 +173,7 @@
             ...
         </div>
 
-        <!-- Audio Visualizer (Integrated) -->
+        <!-- Audio Visualizer -->
         <div id="audioVisualizer" class="absolute bottom-[110px] left-0 w-full flex justify-center items-center gap-1.5 h-12 opacity-0 transition-opacity duration-300 pointer-events-none z-10">
             <div class="wave-bar w-1.5 bg-blue-400 rounded-full h-2"></div>
             <div class="wave-bar w-1.5 bg-blue-500 rounded-full h-4" style="animation-delay: 0.1s"></div>
@@ -197,7 +195,7 @@
                 </div>
 
                 <!-- Blue Gradient Mic Button -->
-                <button id="micBtn" class="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/40 hover:shadow-blue-500/60 flex items-center justify-center transition-all hover:scale-105 active:scale-95 z-10 relative group ring-4 ring-white">
+                <button id="micBtn" class="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/40 hover:shadow-blue-500/60 flex items-center justify-center transition-all hover:scale-105 active:scale-95 z-10 relative group ring-4 ring-white cursor-pointer">
                     <div class="absolute inset-0 rounded-full border border-white/20"></div>
                     <i class="fas fa-microphone text-2xl transition-transform duration-300 drop-shadow-sm"></i>
                 </button>
@@ -247,6 +245,7 @@
             updateVoiceUI();
             
             if (!GEMINI_API_KEY) {
+                // Delay config prompt slightly to allow UI to render
                 setTimeout(() => toggleConfig(), 800);
             } else {
                 apiKeyInput.value = GEMINI_API_KEY;
@@ -506,14 +505,10 @@
         // --- UI Updates ---
 
         function updateMicState(state) {
-            micBtn.className = "w-16 h-16 rounded-full flex items-center justify-center transition-all z-10 relative group ring-4 ring-white ";
+            micBtn.className = "w-16 h-16 rounded-full flex items-center justify-center transition-all z-10 relative group ring-4 ring-white cursor-pointer ";
             const icon = micBtn.querySelector('i');
             
             if (state === 'listening') {
-                // Recording Red, but keep shadow blue/red mixed or just red for clarity? 
-                // Standard convention is RED for record. User asked for BLUE gradient button.
-                // I will keep the BUTTON blue, but make it pulse or icon red? 
-                // Let's make it a Deep Red gradient for recording state to be clear.
                 micBtn.className += "bg-gradient-to-br from-red-500 to-red-600 text-white shadow-lg shadow-red-500/40 scale-110 mic-active";
                 icon.className = "fas fa-stop text-2xl";
                 statusLabel.className = "text-xs font-bold text-red-500 uppercase tracking-wider mb-0.5";
@@ -526,7 +521,6 @@
                 statusLabel.textContent = "PENSANDO";
                 statusText.textContent = "Generando respuesta...";
             } else { 
-                // Idle State - BLUE GRADIENT as requested
                 micBtn.className += "bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/40 hover:shadow-blue-500/60 hover:scale-105 active:scale-95";
                 icon.className = "fas fa-microphone text-2xl";
                 statusLabel.className = "text-xs font-bold text-slate-400 uppercase tracking-wider mb-0.5";
@@ -553,7 +547,7 @@
                         <div class="bg-blue-600 text-white p-4 rounded-2xl rounded-tr-none text-[15px] leading-relaxed shadow-md shadow-blue-500/10 pb-8">
                             ${content}
                         </div>
-                        <button onclick="translateMessage(this, '${safeText}')" class="absolute -bottom-3 left-2 bg-white border border-slate-100 shadow-md rounded-full px-3 py-1.5 text-[11px] font-semibold text-blue-600 flex items-center gap-1.5 hover:bg-slate-50 transition-colors z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                        <button onclick="translateMessage(this, '${safeText}')" class="absolute -bottom-3 left-2 bg-white border border-slate-100 shadow-md rounded-full px-3 py-1.5 text-[11px] font-semibold text-blue-600 flex items-center gap-1.5 hover:bg-slate-50 transition-colors z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 cursor-pointer">
                             <i class="fas fa-language text-blue-500 text-sm"></i> Traducir
                         </button>
                     </div>
@@ -566,7 +560,7 @@
                         <div class="bg-white text-slate-700 p-4 rounded-2xl rounded-tl-none text-[15px] leading-relaxed border border-slate-100 shadow-sm pb-8">
                             ${isHtml ? content : content}
                         </div>
-                        <button onclick="translateMessage(this, '${safeText}')" class="absolute -bottom-3 right-2 bg-white border border-slate-200 shadow-sm rounded-full px-3 py-1.5 text-[11px] font-semibold text-slate-600 flex items-center gap-1.5 hover:text-blue-600 hover:border-blue-200 transition-all z-10 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-200">
+                        <button onclick="translateMessage(this, '${safeText}')" class="absolute -bottom-3 right-2 bg-white border border-slate-200 shadow-sm rounded-full px-3 py-1.5 text-[11px] font-semibold text-slate-600 flex items-center gap-1.5 hover:text-blue-600 hover:border-blue-200 transition-all z-10 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-200 cursor-pointer">
                             <i class="fas fa-language text-blue-500 text-sm"></i> Traducir
                         </button>
                     </div>
@@ -579,9 +573,56 @@
             });
         }
 
-        // ... (Remaining formatResponse, toggleConfig, saveAndCloseConfig, etc. same as before)
-        
-        // Ensure voice UI selection also reflects blue highlights if needed, but pink is fine for the modal.
+        function formatResponse(text) {
+            if (text.includes('CORRECTION:')) {
+                let parts = text.split('\n');
+                let correctionLine = parts.find(p => p.includes('CORRECTION:'));
+                let restOfText = text.replace(correctionLine, '').trim();
+
+                if (correctionLine) {
+                    let cleanCorrection = correctionLine.replace(/CORRECTION:/i, '').trim();
+                    cleanCorrection = cleanCorrection.replace(/~(.*?)~/g, '<span class="text-red-500 line-through decoration-2 opacity-70 mx-1">$1</span>');
+                    cleanCorrection = cleanCorrection.replace(/\*(.*?)\*/g, '<span class="text-green-600 font-bold mx-1">$1</span>');
+
+                    const correctionBlock = `
+                        <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 mb-4 relative overflow-hidden">
+                            <div class="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-red-400 to-green-500"></div>
+                            <div class="flex items-center gap-2 mb-2">
+                                <i class="fas fa-magic text-blue-500"></i>
+                                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Corrección</span>
+                            </div>
+                            <div class="text-slate-800 text-[15px] leading-relaxed pl-1">
+                                ${cleanCorrection}
+                            </div>
+                        </div>
+                    `;
+                    return correctionBlock + restOfText.replace(/\n/g, '<br>');
+                }
+            }
+            return text.replace(/\n/g, '<br>');
+        }
+
+        function toggleConfig() {
+            configPanel.classList.toggle('hidden');
+        }
+
+        function saveAndCloseConfig() {
+            const key = apiKeyInput.value.trim();
+            if (key) {
+                GEMINI_API_KEY = key;
+                localStorage.setItem('gemini_api_key', key);
+                localStorage.setItem('gemini_voice', SELECTED_VOICE);
+                toggleConfig();
+            } else {
+                alert("Por favor ingresa una API Key.");
+            }
+        }
+
+        function selectVoice(voiceName) {
+            SELECTED_VOICE = voiceName;
+            updateVoiceUI();
+        }
+
         function updateVoiceUI() {
             document.querySelectorAll('.voice-btn').forEach(btn => {
                 btn.classList.remove('border-blue-500', 'bg-blue-50', 'ring-1', 'ring-blue-500');
@@ -593,8 +634,9 @@
                 selectedBtn.classList.add('border-blue-500', 'bg-blue-50', 'ring-1', 'ring-blue-500');
             }
         }
-        
-        // ... (init call)
+
+        // Start App
+        init();
     </script>
 </body>
 </html>
