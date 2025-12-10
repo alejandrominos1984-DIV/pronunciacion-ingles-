@@ -162,7 +162,7 @@
                     <i class="fas fa-robot text-xs text-slate-500"></i>
                 </div>
                 <div class="bg-slate-50 text-slate-700 p-4 rounded-2xl rounded-tl-none max-w-[85%] text-[15px] leading-relaxed border border-slate-100">
-                    Hello! I'm your AI English tutor with a human-like voice. Let's practice! Tap the microphone to speak.
+                    Hello! I'm your AI English tutor. I will listen to you and correct any mistakes I hear. Let's practice!
                 </div>
             </div>
         </div>
@@ -211,11 +211,14 @@
         let conversationHistory = [];
         
         // --- Prompts ---
-        const SYSTEM_PROMPT = `You are a professional English tutor. 
-        1. Keep the conversation natural.
-        2. If the user makes a mistake, output a separate paragraph starting with "Correction:" to explain it briefly.
-        3. Then continue the conversation.
-        4. Keep responses short (max 2-3 sentences) so the audio isn't too long.`;
+        // UPDATED PROMPT: Specifically asks for ~error~ *correction* format
+        const SYSTEM_PROMPT = `You are a friendly and helpful English teacher. 
+        1. CRITICAL: If the user makes ANY grammar, vocabulary, or pronunciation mistake, you MUST start your response with a "CORRECTION:" block.
+        2. Inside the "CORRECTION:" block, rewrite the user's sentence but wrap the MISTAKE in ~tildes~ and the CORRECTION in *asterisks* immediately after.
+           Example: If user says "I goes to store", you output: "CORRECTION: I ~goes~ *go* to *the* store."
+        3. After the correction, start a new paragraph and continue the conversation naturally.
+        4. If the English is perfect, do NOT output a correction block, just converse.
+        5. Keep your conversational response concise (1-3 sentences).`;
 
         // --- Initialization ---
         function init() {
@@ -231,7 +234,7 @@
 
             // Init history
             conversationHistory.push({ role: "user", parts: [{ text: SYSTEM_PROMPT }] });
-            conversationHistory.push({ role: "model", parts: [{ text: "Understood. I'm ready." }] });
+            conversationHistory.push({ role: "model", parts: [{ text: "Understood. I will listen for errors, mark them with ~error~ *correction*, and then converse." }] });
         }
 
         function setupSpeechRecognition() {
@@ -279,7 +282,7 @@
                 // 1. Get Text Response
                 const responseText = await callGeminiText();
                 
-                // 2. Process & Display Text
+                // 2. Process & Display Text (Now handles the colorful corrections)
                 const displayHtml = formatResponse(responseText);
                 addMessage(displayHtml, false, true); // true = allow HTML
                 
@@ -287,8 +290,12 @@
 
                 // 3. Get Audio (TTS)
                 statusText.textContent = "Generating Voice...";
-                // Strip markdown for cleaner reading
-                const textToSpeak = responseText.replace(/\*/g, '').replace(/Correction:/i, 'Correction.'); 
+                // Strip the correction markings for speech so it doesn't say "tilde goes tilde"
+                let textToSpeak = responseText
+                    .replace(/CORRECTION:/i, 'Here is a quick correction.')
+                    .replace(/~.*?~/g, '') // Remove the error word completely for speech
+                    .replace(/\*/g, '');   // Remove asterisks around correction
+                
                 await playGeminiTTS(textToSpeak);
                 
                 updateMicState('idle');
@@ -304,7 +311,7 @@
             const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${GEMINI_API_KEY}`;
             const payload = {
                 contents: conversationHistory,
-                generationConfig: { maxOutputTokens: 300, temperature: 0.7 }
+                generationConfig: { maxOutputTokens: 350, temperature: 0.7 }
             };
 
             const response = await fetch(url, {
@@ -343,8 +350,6 @@
             
             const data = await response.json();
             const base64Audio = data.candidates[0].content.parts[0].inlineData.data;
-            
-            // Convert Base64 (PCM) to Wav and play
             const wavUrl = pcmToWav(base64Audio);
             
             return new Promise((resolve) => {
@@ -362,8 +367,6 @@
             });
         }
 
-        // --- Helper: PCM16 to WAV ---
-        // Gemini returns raw PCM 24kHz Mono. We need to wrap it in WAV container.
         function pcmToWav(base64PCM) {
             const binaryString = atob(base64PCM);
             const len = binaryString.length;
@@ -371,29 +374,21 @@
             for (let i = 0; i < len; i++) {
                 bytes[i] = binaryString.charCodeAt(i);
             }
-            
             const wavHeader = new ArrayBuffer(44);
             const view = new DataView(wavHeader);
-            
-            // RIFF chunk descriptor
             writeString(view, 0, 'RIFF');
             view.setUint32(4, 36 + len, true);
             writeString(view, 8, 'WAVE');
-            
-            // fmt sub-chunk
             writeString(view, 12, 'fmt ');
-            view.setUint32(16, 16, true); // Subchunk1Size (16 for PCM)
-            view.setUint16(20, 1, true); // AudioFormat (1 for PCM)
-            view.setUint16(22, 1, true); // NumChannels (1 for Mono)
-            view.setUint32(24, 24000, true); // SampleRate (24kHz for Gemini TTS)
-            view.setUint32(28, 24000 * 2, true); // ByteRate
-            view.setUint16(32, 2, true); // BlockAlign
-            view.setUint16(34, 16, true); // BitsPerSample
-            
-            // data sub-chunk
+            view.setUint32(16, 16, true); 
+            view.setUint16(20, 1, true); 
+            view.setUint16(22, 1, true); 
+            view.setUint32(24, 24000, true); 
+            view.setUint32(28, 24000 * 2, true); 
+            view.setUint16(32, 2, true); 
+            view.setUint16(34, 16, true); 
             writeString(view, 36, 'data');
             view.setUint32(40, len, true);
-            
             const blob = new Blob([view, bytes], { type: 'audio/wav' });
             return URL.createObjectURL(blob);
         }
@@ -407,7 +402,6 @@
         // --- UI Helpers ---
 
         function updateMicState(state) {
-            // Reset classes
             micBtn.className = "group relative w-16 h-16 rounded-full transition-all flex items-center justify-center shadow-xl ";
             
             if (state === 'listening') {
@@ -420,7 +414,7 @@
                 micBtn.innerHTML = '<i class="fas fa-circle-notch text-slate-500 text-xl animate-spin"></i>';
                 statusText.textContent = "Thinking...";
                 statusText.className = "text-xs font-semibold text-slate-400 uppercase tracking-widest";
-            } else { // Idle
+            } else { 
                 micBtn.className += "bg-slate-900 hover:scale-105 active:scale-95 shadow-slate-900/20";
                 micBtn.innerHTML = '<div class="absolute inset-0 rounded-full border border-white/10"></div><i class="fas fa-microphone text-xl text-white group-hover:text-brand-200"></i>';
                 statusText.textContent = "Tap to speak";
@@ -458,16 +452,43 @@
         }
 
         function formatResponse(text) {
-            // Styling for "Correction:" block
-            if (text.toLowerCase().includes('correction:')) {
-                return text.replace(/(Correction:[\s\S]*?)(\n\n|\n|$)/gi, 
-                    `<div class="bg-amber-50 border-l-4 border-amber-400 p-3 rounded-r-lg mb-3 text-amber-900 text-sm">
-                        <strong class="block text-amber-600 mb-1 text-xs uppercase tracking-wide">Correction</strong>
-                        $1
-                     </div>`
-                ).replace(/Correction:/gi, '');
+            // Updated Format Logic: Look for "CORRECTION:" block
+            if (text.includes('CORRECTION:')) {
+                // Split the correction part from the rest
+                let parts = text.split('\n');
+                let correctionLine = parts.find(p => p.includes('CORRECTION:'));
+                let restOfText = text.replace(correctionLine, '').trim();
+
+                if (correctionLine) {
+                    // Remove "CORRECTION:" label for cleaner display inside the box
+                    let cleanCorrection = correctionLine.replace(/CORRECTION:/i, '').trim();
+                    
+                    // Replace ~error~ with red strikethrough
+                    cleanCorrection = cleanCorrection.replace(/~(.*?)~/g, 
+                        '<span class="text-red-500 line-through decoration-2 opacity-80 mx-1">$1</span>');
+                    
+                    // Replace *correction* with green bold
+                    cleanCorrection = cleanCorrection.replace(/\*(.*?)\*/g, 
+                        '<span class="text-green-600 font-bold mx-1">$1</span>');
+
+                    // Build the fancy UI block
+                    const correctionBlock = `
+                        <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 mb-4">
+                            <div class="flex items-center gap-2 mb-2">
+                                <i class="fas fa-check-circle text-green-500"></i>
+                                <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Corrección Sugerida</span>
+                            </div>
+                            <div class="text-slate-800 text-[15px] leading-relaxed">
+                                ${cleanCorrection}
+                            </div>
+                        </div>
+                    `;
+                    
+                    // Return combined HTML
+                    return correctionBlock + restOfText.replace(/\n/g, '<br>');
+                }
             }
-            return text;
+            return text.replace(/\n/g, '<br>');
         }
 
         function toggleConfig() {
