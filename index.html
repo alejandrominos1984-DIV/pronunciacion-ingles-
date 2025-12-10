@@ -73,17 +73,6 @@
             0%, 100% { height: 4px; }
             50% { height: 12px; }
         }
-
-        /* Typing Indicator */
-        .typing-dot {
-            animation: typing 1.4s infinite ease-in-out both;
-        }
-        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
-        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
-        @keyframes typing {
-            0%, 80%, 100% { transform: scale(0); }
-            40% { transform: scale(1); }
-        }
     </style>
 </head>
 <body class="h-[100dvh] flex flex-col items-center justify-center text-slate-800 antialiased">
@@ -136,7 +125,7 @@
     <div class="w-full h-full md:h-[700px] md:max-w-[400px] bg-white md:rounded-[2rem] shadow-2xl md:shadow-soft overflow-hidden flex flex-col relative border border-slate-100">
         
         <!-- Header -->
-        <div class="bg-white/80 backdrop-blur-md p-4 pt-safe-top flex items-center justify-between border-b border-slate-100 sticky top-0 z-20">
+        <div class="bg-white/95 backdrop-blur-md p-4 pt-safe-top flex items-center justify-between border-b border-slate-100 sticky top-0 z-20 shrink-0">
             <div class="flex items-center gap-3">
                 <div class="w-10 h-10 bg-gradient-to-tr from-brand-600 to-indigo-600 rounded-full flex items-center justify-center text-white shadow-lg shadow-brand-500/30">
                     <i class="fas fa-graduation-cap text-sm"></i>
@@ -154,8 +143,8 @@
             </button>
         </div>
 
-        <!-- Chat Area -->
-        <div id="chatContainer" class="flex-1 overflow-y-auto p-5 flex flex-col gap-4 bg-white chat-scroll pb-32">
+        <!-- Chat Area (Flex-1 ensures it takes available space but doesn't go under footer) -->
+        <div id="chatContainer" class="flex-1 overflow-y-auto p-5 flex flex-col gap-4 bg-white chat-scroll">
             <!-- Welcome Message -->
             <div class="flex gap-3 message-enter">
                 <div class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center shrink-0 mt-1">
@@ -167,8 +156,8 @@
             </div>
         </div>
 
-        <!-- Audio Visualizer (Hidden by default) -->
-        <div id="audioVisualizer" class="absolute bottom-28 left-0 w-full flex justify-center items-center gap-1 h-8 opacity-0 transition-opacity duration-300 pointer-events-none">
+        <!-- Audio Visualizer (Absolute but safe zone) -->
+        <div id="audioVisualizer" class="absolute bottom-[100px] left-0 w-full flex justify-center items-center gap-1 h-8 opacity-0 transition-opacity duration-300 pointer-events-none z-10">
             <div class="wave-bar w-1 bg-brand-500 rounded-full h-1"></div>
             <div class="wave-bar w-1 bg-brand-500 rounded-full h-2" style="animation-delay: 0.1s"></div>
             <div class="wave-bar w-1 bg-brand-500 rounded-full h-3" style="animation-delay: 0.2s"></div>
@@ -176,10 +165,10 @@
             <div class="wave-bar w-1 bg-brand-500 rounded-full h-1" style="animation-delay: 0.4s"></div>
         </div>
 
-        <!-- Bottom Controls -->
-        <div class="absolute bottom-0 left-0 w-full bg-white/90 backdrop-blur-xl border-t border-slate-100 p-6 pb-8 flex flex-col items-center gap-4 z-30">
+        <!-- Bottom Controls (Now part of the Flex flow, NOT absolute) -->
+        <div class="w-full bg-white border-t border-slate-100 p-3 pb-6 flex flex-col items-center gap-2 z-30 shrink-0 shadow-[0_-5px_20px_rgba(0,0,0,0.02)]">
             
-            <div id="statusText" class="text-xs font-semibold text-slate-400 uppercase tracking-widest transition-all">Tap to speak</div>
+            <div id="statusText" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest transition-all h-4">Tap to speak</div>
 
             <button id="micBtn" class="group relative w-16 h-16 rounded-full bg-slate-900 text-white shadow-xl shadow-slate-900/20 flex items-center justify-center transition-all hover:scale-105 active:scale-95">
                 <div class="absolute inset-0 rounded-full border border-white/10"></div>
@@ -211,7 +200,6 @@
         let conversationHistory = [];
         
         // --- Prompts ---
-        // UPDATED PROMPT: Specifically asks for ~error~ *correction* format
         const SYSTEM_PROMPT = `You are a friendly and helpful English teacher. 
         1. CRITICAL: If the user makes ANY grammar, vocabulary, or pronunciation mistake, you MUST start your response with a "CORRECTION:" block.
         2. Inside the "CORRECTION:" block, rewrite the user's sentence but wrap the MISTAKE in ~tildes~ and the CORRECTION in *asterisks* immediately after.
@@ -408,17 +396,17 @@
                 micBtn.className += "bg-red-500 scale-110 shadow-red-500/40";
                 micBtn.innerHTML = '<i class="fas fa-stop text-white text-xl animate-pulse"></i>';
                 statusText.textContent = "Listening...";
-                statusText.className = "text-xs font-bold text-red-500 uppercase tracking-widest";
+                statusText.className = "text-[10px] font-bold text-red-500 uppercase tracking-widest";
             } else if (state === 'processing') {
                 micBtn.className += "bg-slate-200 cursor-wait";
                 micBtn.innerHTML = '<i class="fas fa-circle-notch text-slate-500 text-xl animate-spin"></i>';
                 statusText.textContent = "Thinking...";
-                statusText.className = "text-xs font-semibold text-slate-400 uppercase tracking-widest";
+                statusText.className = "text-[10px] font-semibold text-slate-400 uppercase tracking-widest";
             } else { 
                 micBtn.className += "bg-slate-900 hover:scale-105 active:scale-95 shadow-slate-900/20";
                 micBtn.innerHTML = '<div class="absolute inset-0 rounded-full border border-white/10"></div><i class="fas fa-microphone text-xl text-white group-hover:text-brand-200"></i>';
                 statusText.textContent = "Tap to speak";
-                statusText.className = "text-xs font-semibold text-slate-400 uppercase tracking-widest";
+                statusText.className = "text-[10px] font-semibold text-slate-400 uppercase tracking-widest";
             }
         }
 
@@ -448,19 +436,20 @@
             }
             
             chatContainer.appendChild(div);
-            chatContainer.scrollTo({ top: chatContainer.scrollHeight, behavior: 'smooth' });
+            // Wait slight tick for layout to update before scrolling
+            requestAnimationFrame(() => {
+                chatContainer.scrollTo({ top: chatContainer.scrollHeight, behavior: 'smooth' });
+            });
         }
 
         function formatResponse(text) {
             // Updated Format Logic: Look for "CORRECTION:" block
             if (text.includes('CORRECTION:')) {
-                // Split the correction part from the rest
                 let parts = text.split('\n');
                 let correctionLine = parts.find(p => p.includes('CORRECTION:'));
                 let restOfText = text.replace(correctionLine, '').trim();
 
                 if (correctionLine) {
-                    // Remove "CORRECTION:" label for cleaner display inside the box
                     let cleanCorrection = correctionLine.replace(/CORRECTION:/i, '').trim();
                     
                     // Replace ~error~ with red strikethrough
@@ -471,12 +460,11 @@
                     cleanCorrection = cleanCorrection.replace(/\*(.*?)\*/g, 
                         '<span class="text-green-600 font-bold mx-1">$1</span>');
 
-                    // Build the fancy UI block
                     const correctionBlock = `
                         <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 mb-4">
                             <div class="flex items-center gap-2 mb-2">
                                 <i class="fas fa-check-circle text-green-500"></i>
-                                <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Corrección Sugerida</span>
+                                <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Corrección Sugerida</span>
                             </div>
                             <div class="text-slate-800 text-[15px] leading-relaxed">
                                 ${cleanCorrection}
@@ -484,7 +472,6 @@
                         </div>
                     `;
                     
-                    // Return combined HTML
                     return correctionBlock + restOfText.replace(/\n/g, '<br>');
                 }
             }
