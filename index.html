@@ -138,7 +138,10 @@
                         </div>
                         <div>
                             <h2 class="font-display font-bold text-lg text-gray-800 leading-tight" id="botNameDisplay">Professor Emma</h2>
-                            <p class="text-xs text-primary font-medium bg-blue-50 px-2 py-0.5 rounded-full inline-block">AI English Tutor</p>
+                            <div class="flex items-center gap-2">
+                                <p class="text-xs text-primary font-medium bg-blue-50 px-2 py-0.5 rounded-full inline-block">AI English Tutor</p>
+                                <span id="economyModeBadge" class="hidden text-[10px] bg-orange-100 text-orange-600 px-2 py-0.5 rounded-full font-bold" title="Using browser voice to save quota">⚡ ECO MODE</span>
+                            </div>
                         </div>
                     </div>
                     
@@ -226,6 +229,7 @@
                             <option value="Aoede">Sophia (Natural Female)</option>
                             <option value="Fenrir">Liam (Natural Male)</option>
                             <option value="Puck">Noah (Natural Male)</option>
+                            <option value="browser">⚡ Eco Mode (Browser Voice)</option>
                         </select>
                         <div class="absolute right-3 top-3 text-gray-400 pointer-events-none">
                             <i class="fas fa-chevron-down"></i>
@@ -266,13 +270,16 @@
         const notificationText = document.getElementById('notificationText');
         const typingIndicator = document.getElementById('typingIndicator');
         const statusText = document.getElementById('statusText');
+        const economyModeBadge = document.getElementById('economyModeBadge');
 
         // State
         let state = {
             isListening: false,
             apiKey: '',
-            voice: 'Kore', // Default female voice
-            history: []
+            voice: 'Kore',
+            history: [],
+            ecoMode: false, // Starts false, enables if 429 encountered
+            retryCount: 0
         };
 
         let recognition = null;
@@ -295,6 +302,10 @@
             if (savedVoice) {
                 state.voice = savedVoice;
                 voiceSelect.value = savedVoice;
+                if(savedVoice === 'browser') {
+                    state.ecoMode = true;
+                    updateEcoModeUI();
+                }
             }
         }
 
@@ -311,20 +322,27 @@
                 settingsModal.classList.add('hidden');
             });
             
-            // Close modal on outside click
             settingsModal.addEventListener('click', (e) => {
                 if (e.target === settingsModal) settingsModal.classList.add('hidden');
             });
         }
 
-        // --- Speech Recognition (Browser Web Speech API) ---
+        function updateEcoModeUI() {
+            if(state.ecoMode) {
+                economyModeBadge.classList.remove('hidden');
+            } else {
+                economyModeBadge.classList.add('hidden');
+            }
+        }
+
+        // --- Speech Recognition ---
         function initSpeechRecognition() {
             if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
                 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
                 recognition = new SpeechRecognition();
                 recognition.continuous = false;
                 recognition.interimResults = false;
-                recognition.lang = 'en-US'; // User speaks English
+                recognition.lang = 'en-US';
 
                 recognition.onstart = () => {
                     state.isListening = true;
@@ -340,7 +358,10 @@
                 recognition.onerror = (event) => {
                     console.error('Speech error:', event.error);
                     updateUIState('idle');
-                    showNotification('Microphone error. Try again.', 'error');
+                    // Don't show error toast for no-speech
+                    if(event.error !== 'no-speech') {
+                         showNotification('Microphone error. Try again.', 'error');
+                    }
                 };
 
                 recognition.onend = () => {
@@ -365,9 +386,9 @@
             }
         }
 
-        // --- Gemini Interaction (Text & Audio) ---
+        // --- Gemini Interaction ---
 
-        async function processWithGemini(userText) {
+        async function processWithGemini(userText, isRetry = false) {
             if (!state.apiKey) {
                 addBotMessage("Please enter your API Key in settings to start chatting!");
                 updateUIState('idle');
@@ -378,19 +399,62 @@
 
             // 1. Get Text Response
             try {
-                const textResponse = await fetchGeminiText(userText);
+                let textResponse;
+                try {
+                    textResponse = await fetchGeminiText(userText);
+                    state.retryCount = 0; // Reset retry count on success
+                } catch (textError) {
+                    if (textError.status === 429) {
+                         // RATE LIMIT HIT
+                         const waitTime = textError.retryAfter || 5; // Default 5s if unknown
+                         
+                         if(state.retryCount < 2) {
+                             state.retryCount++;
+                             statusText.textContent = `Quota full. Retrying in ${waitTime}s...`;
+                             
+                             // Enable Eco Mode automatically to save future requests
+                             if(!state.ecoMode) {
+                                 state.ecoMode = true;
+                                 updateEcoModeUI();
+                                 showNotification("High traffic: Eco Mode enabled (Browser Voice)", "info");
+                             }
+
+                             // Wait and Retry
+                             await new Promise(r => setTimeout(r, waitTime * 1000));
+                             await processWithGemini(userText, true);
+                             return;
+                         }
+                         throw new Error(`Traffic limit. Please wait ${waitTime}s.`);
+                    }
+                    throw textError;
+                }
                 
-                // Add message to chat but allow HTML for corrections
-                addBotMessage(textResponse);
+                if (!isRetry) addBotMessage(textResponse);
                 
                 // 2. Get Audio Response
                 updateUIState('generating_audio');
                 
-                await speakGemini(textResponse);
+                // Smart Fallback: If Eco Mode is ON or Voice API fails, use Browser Voice
+                if (state.ecoMode || state.voice === 'browser') {
+                    speakNative(textResponse);
+                } else {
+                    try {
+                        await speakGemini(textResponse);
+                    } catch (ttsError) {
+                        console.warn("TTS API failed/limited, falling back to Native", ttsError);
+                        // If TTS fails (likely 429), switch to Eco Mode for future turns
+                        if(!state.ecoMode) {
+                            state.ecoMode = true;
+                            updateEcoModeUI();
+                            showNotification("Voice limit hit. Switching to Eco Mode.", "info");
+                        }
+                        speakNative(textResponse);
+                    }
+                }
 
             } catch (error) {
                 console.error(error);
-                addBotMessage(`Error: ${error.message}. Please check your API Key and try again.`);
+                if(!isRetry) addBotMessage(`System Error: ${error.message}. Please try again later.`);
                 updateUIState('idle');
             }
         }
@@ -398,7 +462,6 @@
         async function fetchGeminiText(input) {
             const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${state.apiKey}`;
             
-            // Context management with strict formatting rules
             const contextPrompt = `
                 You are a friendly, encouraging English Tutor named Professor Emma. 
                 Your goal is to help a Spanish speaker improve their English.
@@ -427,7 +490,15 @@
 
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.error?.message || `API Error ${response.status}`);
+                const error = new Error(errorData.error?.message || `API Error ${response.status}`);
+                error.status = response.status;
+                
+                // Try to parse retry delay from message or headers
+                // Google usually sends message like "Please retry in 25.8s"
+                const match = error.message.match(/retry in ([0-9.]+)s/);
+                if(match) error.retryAfter = Math.ceil(parseFloat(match[1]));
+                
+                throw error;
             }
             
             const data = await response.json();
@@ -447,11 +518,9 @@
             const messageDiv = btn.parentElement;
             const textContainer = messageDiv.querySelector('.text-content');
             
-            // Check if translation already exists
             let translationDiv = messageDiv.querySelector('.translation-result');
             
             if (translationDiv) {
-                // Toggle visibility
                 if (translationDiv.style.display === 'none') {
                      translationDiv.style.display = 'block';
                      btn.classList.add('text-indigo-700', 'bg-indigo-100');
@@ -462,29 +531,26 @@
                 return;
             }
 
-            // Visual loading state
             const originalIcon = btn.innerHTML;
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
             btn.disabled = true;
 
-            // Get HTML to preserve formatting tags (red/green spans)
             const contentToTranslate = textContainer.innerHTML.trim();
 
             try {
                 const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${state.apiKey}`;
                 
-                // Prompt Engineering: Ensure HTML tags are preserved and inner English words are NOT translated
                 const prompt = `
-                    You are a translator for an English learning app.
+                    You are a translator.
                     Task: Translate the following HTML content to Spanish.
                     
                     CRITICAL RULES:
-                    1. Keep any text inside <span class="error-mark">...</span> AND <span class="correction-mark">...</span> tags EXACTLY as is (in English). Do NOT translate the words inside these tags.
-                    2. Keep the <span> tags themselves intact with their classes.
-                    3. Translate the surrounding conversational text to natural Spanish.
-                    4. Do not output markdown code fences. Just return the raw string.
+                    1. Keep any text inside <span class="error-mark">...</span> AND <span class="correction-mark">...</span> tags EXACTLY as is (in English).
+                    2. Keep the <span> tags themselves intact.
+                    3. Translate surrounding text to Spanish.
+                    4. No markdown.
                     
-                    Input to translate: "${contentToTranslate}"
+                    Input: "${contentToTranslate}"
                 `;
 
                 const payload = {
@@ -501,16 +567,12 @@
                 
                 const data = await response.json();
                 let translatedContent = data.candidates[0].content.parts[0].text;
-
-                // Cleanup markdown if present
                 translatedContent = translatedContent.replace(/```html/g, '').replace(/```/g, '').trim();
 
                 if (translatedContent) {
                     translationDiv = document.createElement('div');
                     translationDiv.className = 'translation-result text-[15px] text-indigo-600 mt-3 pt-2 border-t border-gray-100 font-medium';
-                    translationDiv.innerHTML = translatedContent; // Use innerHTML to render the colors
-                    
-                    // Insert before the button
+                    translationDiv.innerHTML = translatedContent;
                     messageDiv.insertBefore(translationDiv, btn);
                     btn.classList.add('text-indigo-700', 'bg-indigo-100');
                 }
@@ -518,16 +580,13 @@
                 console.error("Translation error", e);
                 showNotification("Translation failed", "error");
             } finally {
-                // Reset button
                 btn.innerHTML = '<i class="fas fa-language"></i>';
                 btn.disabled = false;
             }
         }
 
         async function speakGemini(text) {
-            // Remove HTML tags for speech
             const cleanText = text.replace(/<[^>]*>/g, '');
-            
             const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${state.apiKey}`;
             
             const payload = {
@@ -536,66 +595,45 @@
                     responseModalities: ["AUDIO"],
                     speechConfig: {
                         voiceConfig: {
-                            prebuiltVoiceConfig: {
-                                voiceName: state.voice
-                            }
+                            prebuiltVoiceConfig: { voiceName: state.voice }
                         }
                     }
                 }
             };
 
-            try {
-                const response = await fetch(url, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
 
-                if (!response.ok) {
-                    throw new Error(`TTS API Error ${response.status}`);
-                }
+            if (!response.ok) {
+                // Throwing specific status allows fallback logic in main function
+                const err = new Error("TTS Error");
+                err.status = response.status;
+                throw err;
+            }
 
-                const data = await response.json();
-                
-                if (data.candidates && data.candidates[0].content.parts[0].inlineData) {
-                    const base64Audio = data.candidates[0].content.parts[0].inlineData.data;
-                    await playPCM16(base64Audio);
-                } else {
-                    throw new Error('No audio data received');
-                }
-            } catch (e) {
-                console.error("TTS Failed, falling back", e);
-                showNotification(`Voice error, using fallback.`, "error");
-                speakNative(cleanText);
+            const data = await response.json();
+            if (data.candidates && data.candidates[0].content.parts[0].inlineData) {
+                await playPCM16(data.candidates[0].content.parts[0].inlineData.data);
+            } else {
+                throw new Error('No audio data');
             }
         }
 
-        // --- Audio Processing (PCM -> WAV -> Play) ---
         async function playPCM16(base64Data) {
             updateUIState('speaking');
-            
             const binaryString = window.atob(base64Data);
             const len = binaryString.length;
             const bytes = new Uint8Array(len);
-            for (let i = 0; i < len; i++) {
-                bytes[i] = binaryString.charCodeAt(i);
-            }
+            for (let i = 0; i < len; i++) { bytes[i] = binaryString.charCodeAt(i); }
             
-            const wavBytes = getWavBytes(bytes.buffer, {
-                isFloat: false,
-                numChannels: 1,
-                sampleRate: 24000,
-            });
-
+            const wavBytes = getWavBytes(bytes.buffer, { isFloat: false, numChannels: 1, sampleRate: 24000 });
             const blob = new Blob([wavBytes], { type: 'audio/wav' });
             const audioUrl = URL.createObjectURL(blob);
             const audio = new Audio(audioUrl);
-            
-            audio.onended = () => {
-                updateUIState('idle');
-                URL.revokeObjectURL(audioUrl);
-            };
-            
+            audio.onended = () => { updateUIState('idle'); URL.revokeObjectURL(audioUrl); };
             await audio.play();
         }
 
@@ -615,47 +653,33 @@
             const sampleRate = options.sampleRate || 44100;
             const bytesPerSample = options.isFloat ? 4 : 2;
             const format = options.isFloat ? 3 : 1;
-
             const blockAlign = numChannels * bytesPerSample;
             const byteRate = sampleRate * blockAlign;
             const dataSize = numFrames * blockAlign;
-
             const buffer = new ArrayBuffer(44);
             const dv = new DataView(buffer);
-
             let p = 0;
-
-            function writeString(s) {
-                for (let i = 0; i < s.length; i++) {
-                    dv.setUint8(p + i, s.charCodeAt(i));
-                }
-                p += s.length;
-            }
-
-            function writeUint32(d) {
-                dv.setUint32(p, d, true);
-                p += 4;
-            }
-
-            function writeUint16(d) {
-                dv.setUint16(p, d, true);
-                p += 2;
-            }
-
+            function writeString(s) { for (let i = 0; i < s.length; i++) { dv.setUint8(p + i, s.charCodeAt(i)); } p += s.length; }
+            function writeUint32(d) { dv.setUint32(p, d, true); p += 4; }
+            function writeUint16(d) { dv.setUint16(p, d, true); p += 2; }
             writeString('RIFF'); writeUint32(dataSize + 36); writeString('WAVE');
             writeString('fmt '); writeUint32(16); writeUint16(format);
             writeUint16(numChannels); writeUint32(sampleRate); writeUint32(byteRate);
             writeUint16(blockAlign); writeUint16(bytesPerSample * 8);
             writeString('data'); writeUint32(dataSize);
-
             return new Uint8Array(buffer);
         }
 
         function speakNative(text) {
             updateUIState('speaking');
-            const utterance = new SpeechSynthesisUtterance(text);
+            const cleanText = text.replace(/<[^>]*>/g, '');
+            const utterance = new SpeechSynthesisUtterance(cleanText);
             utterance.lang = 'en-US';
             utterance.onend = () => updateUIState('idle');
+            // Try to pick a decent browser voice
+            const voices = speechSynthesis.getVoices();
+            const preferred = voices.find(v => v.name.includes('Google US English')) || voices.find(v => v.lang === 'en-US');
+            if(preferred) utterance.voice = preferred;
             speechSynthesis.speak(utterance);
         }
 
@@ -670,12 +694,9 @@
 
         function addBotMessage(html) {
             const div = document.createElement('div');
-            // Added relative and pb-8 to make space for the button
             div.className = 'message self-start w-[90%] max-w-sm bg-white border border-gray-100 rounded-2xl rounded-tl-none p-4 shadow-sm relative pb-8';
-            
             div.innerHTML = `
                 <div class="text-content text-gray-700 leading-relaxed text-[15px]">${html}</div>
-                
                 <button onclick="translateMessage(this)" class="absolute bottom-2 right-2 text-indigo-500 hover:text-indigo-700 hover:scale-110 transition-all bg-indigo-50 p-1.5 rounded-full w-8 h-8 flex items-center justify-center shadow-sm" title="Translate">
                     <i class="fas fa-language"></i>
                 </button>
@@ -699,7 +720,7 @@
                 case 'thinking':
                     voiceBtn.disabled = true;
                     typingIndicator.classList.remove('hidden');
-                    statusText.textContent = 'Emma is thinking...';
+                    statusText.textContent = state.retryCount > 0 ? 'Retrying soon...' : 'Emma is thinking...';
                     voiceStatus.textContent = 'Processing';
                     break;
                 case 'generating_audio':
@@ -737,8 +758,15 @@
             }
             
             state.voice = voice;
-            localStorage.setItem('tutor_voice', voice);
+            // Manual selection overrides eco mode preference
+            if(voice === 'browser') {
+                state.ecoMode = true;
+            } else {
+                state.ecoMode = false;
+            }
+            updateEcoModeUI();
             
+            localStorage.setItem('tutor_voice', voice);
             settingsModal.classList.add('hidden');
             showNotification('Settings saved');
         }
@@ -751,6 +779,9 @@
             if (type === 'error') {
                 container.className = 'w-6 h-6 rounded-full bg-red-100 flex items-center justify-center text-red-500';
                 icon.className = 'fas fa-exclamation text-xs';
+            } else if (type === 'info') {
+                container.className = 'w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-blue-500';
+                icon.className = 'fas fa-info text-xs';
             } else {
                 container.className = 'w-6 h-6 rounded-full bg-green-100 flex items-center justify-center text-green-500';
                 icon.className = 'fas fa-check text-xs';
@@ -761,7 +792,7 @@
             setTimeout(() => {
                 notification.classList.add('-translate-y-24', 'opacity-0');
                 notification.classList.remove('translate-y-6');
-            }, 3000);
+            }, 4000);
         }
 
         speechSynthesis.onvoiceschanged = () => {};
