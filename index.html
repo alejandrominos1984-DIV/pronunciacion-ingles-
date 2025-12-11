@@ -953,16 +953,16 @@
             </div>
             
             <div class="form-group">
-                <label for="voiceSelect">Voz del profesor</label>
+                <label for="voiceSelect">Voz del profesor (inglés)</label>
                 <select id="voiceSelect" class="api-input">
-                    <option value="">Cargando voces disponibles...</option>
+                    <option value="">Cargando voces en inglés...</option>
                 </select>
                 <div class="voice-info">
                     <i class="fas fa-info-circle"></i>
-                    <span id="voiceInfo">Selecciona una voz para escuchar una vista previa</span>
+                    <span id="voiceInfo">Selecciona una voz natural en inglés</span>
                 </div>
                 <button class="voice-preview-btn" id="voicePreviewBtn">
-                    <i class="fas fa-volume-up"></i> Vista previa de voz
+                    <i class="fas fa-volume-up"></i> Probar esta voz
                 </button>
             </div>
             
@@ -1103,7 +1103,7 @@
             }
         }
 
-        // Cargar voces disponibles
+        // Cargar voces disponibles - SOLO VOCES EN INGLÉS NATURALES
         function loadVoices() {
             voices = speechSynthesis.getVoices();
             
@@ -1113,15 +1113,17 @@
                 return;
             }
             
-            // Filtrar voces en inglés
-            const englishVoices = voices.filter(voice => voice.lang.startsWith('en-'));
+            // Filtrar SOLO voces en inglés con prioridad de las más naturales
+            const naturalEnglishVoices = getNaturalEnglishVoices(voices);
             
-            if (englishVoices.length === 0) {
-                voiceSelect.innerHTML = '<option value="">No hay voces en inglés disponibles</option>';
-                voiceInfo.textContent = 'No se encontraron voces en inglés. Se usará cualquier voz disponible.';
-                populateVoiceSelect(voices);
+            if (naturalEnglishVoices.length === 0) {
+                voiceSelect.innerHTML = '<option value="">No hay voces en inglés naturales disponibles</option>';
+                voiceInfo.textContent = 'No se encontraron voces naturales en inglés. Se usará cualquier voz en inglés disponible.';
+                // Mostrar todas las voces en inglés como fallback
+                const allEnglishVoices = voices.filter(voice => voice.lang.startsWith('en-'));
+                populateVoiceSelect(allEnglishVoices);
             } else {
-                populateVoiceSelect(englishVoices);
+                populateVoiceSelect(naturalEnglishVoices);
             }
             
             // Restaurar voz guardada
@@ -1139,40 +1141,132 @@
                 }
             }
             
-            // Si no hay voz seleccionada, seleccionar la primera voz en inglés o la primera disponible
-            if (!selectedVoice) {
-                if (englishVoices.length > 0) {
-                    selectedVoice = englishVoices[0];
-                    voiceSelect.value = `${englishVoices[0].name}|${englishVoices[0].lang}`;
-                } else if (voices.length > 0) {
-                    selectedVoice = voices[0];
-                    voiceSelect.value = `${voices[0].name}|${voices[0].lang}`;
-                }
+            // Si no hay voz seleccionada, seleccionar la primera voz natural en inglés
+            if (!selectedVoice && naturalEnglishVoices.length > 0) {
+                selectedVoice = naturalEnglishVoices[0];
+                voiceSelect.value = `${naturalEnglishVoices[0].name}|${naturalEnglishVoices[0].lang}`;
             }
             
             updateVoiceInfo();
+        }
+
+        // Obtener voces naturales en inglés con prioridad específica
+        function getNaturalEnglishVoices(voices) {
+            // Primero, filtrar solo voces en inglés
+            const englishVoices = voices.filter(voice => voice.lang.startsWith('en-'));
+            
+            if (englishVoices.length === 0) return [];
+            
+            // Ordenar por prioridad de voces naturales
+            const prioritizedVoices = [];
+            
+            // 1. Prioridad: Google US English (voces neurales de Google)
+            const googleVoices = englishVoices.filter(voice => 
+                voice.name.includes('Google US English') || 
+                voice.name.includes('Google UK English') ||
+                voice.name.includes('en-us-neural') ||
+                voice.name.includes('en-gb-neural')
+            );
+            prioritizedVoices.push(...googleVoices);
+            
+            // 2. Prioridad: Voces de macOS/iOS (Siri)
+            const appleVoices = englishVoices.filter(voice => 
+                voice.name.includes('Samantha') || 
+                voice.name.includes('Daniel') ||
+                voice.name.includes('Karen') ||
+                voice.name.includes('Moira') ||
+                voice.name.includes('Tessa') ||
+                voice.name.includes('Serena')
+            );
+            prioritizedVoices.push(...appleVoices);
+            
+            // 3. Prioridad: Microsoft voices
+            const microsoftVoices = englishVoices.filter(voice => 
+                voice.name.includes('Microsoft') ||
+                voice.name.includes('David') ||
+                voice.name.includes('Zira') ||
+                voice.name.includes('Mark')
+            );
+            prioritizedVoices.push(...microsoftVoices);
+            
+            // 4. Otras voces en inglés que no sean del sistema (pueden ser robóticas)
+            const otherVoices = englishVoices.filter(voice => 
+                !prioritizedVoices.some(v => v.name === voice.name)
+            );
+            
+            // Combinar todas, eliminando duplicados
+            const allVoices = [...new Set([...prioritizedVoices, ...otherVoices])];
+            
+            return allVoices;
         }
 
         // Llenar el selector de voces
         function populateVoiceSelect(voiceList) {
             voiceSelect.innerHTML = '';
             
+            if (voiceList.length === 0) {
+                voiceSelect.innerHTML = '<option value="">No hay voces en inglés disponibles</option>';
+                return;
+            }
+            
             voiceList.forEach(voice => {
                 const option = document.createElement('option');
-                const voiceLabel = `${voice.name} (${voice.lang})${voice.default ? ' - Predeterminada' : ''}`;
+                const voiceLabel = getVoiceLabel(voice);
                 option.value = `${voice.name}|${voice.lang}`;
                 option.textContent = voiceLabel;
                 voiceSelect.appendChild(option);
             });
         }
 
+        // Obtener etiqueta descriptiva para la voz
+        function getVoiceLabel(voice) {
+            let label = voice.name;
+            
+            // Añadir indicadores de calidad
+            if (voice.name.includes('Google') && voice.name.includes('Neural')) {
+                label += ' 🌟 (Google Neural - Excelente)';
+            } else if (voice.name.includes('Google')) {
+                label += ' ⭐ (Google - Muy buena)';
+            } else if (voice.name.includes('Samantha') || voice.name.includes('Daniel')) {
+                label += ' ⭐ (Apple - Natural)';
+            } else if (voice.name.includes('Microsoft')) {
+                label += ' 👍 (Microsoft - Buena)';
+            } else if (voice.default) {
+                label += ' (Predeterminada)';
+            }
+            
+            return label;
+        }
+
         // Actualizar información de voz
         function updateVoiceInfo() {
             if (selectedVoice) {
-                const gender = selectedVoice.name.toLowerCase().includes('female') ? 'Femenina' : 
-                              selectedVoice.name.toLowerCase().includes('male') ? 'Masculina' : 'No especificado';
+                let gender = 'Neutral';
+                if (selectedVoice.name.toLowerCase().includes('female') || 
+                    selectedVoice.name.includes('Samantha') || 
+                    selectedVoice.name.includes('Zira') ||
+                    selectedVoice.name.includes('Karen') ||
+                    selectedVoice.name.includes('Moira')) {
+                    gender = 'Femenina';
+                } else if (selectedVoice.name.toLowerCase().includes('male') || 
+                          selectedVoice.name.includes('Daniel') || 
+                          selectedVoice.name.includes('David') ||
+                          selectedVoice.name.includes('Mark')) {
+                    gender = 'Masculina';
+                }
                 
-                voiceInfo.textContent = `${selectedVoice.name} • ${gender} • ${selectedVoice.lang}`;
+                let quality = 'Buena';
+                if (selectedVoice.name.includes('Google') && selectedVoice.name.includes('Neural')) {
+                    quality = 'Excelente (Neural)';
+                } else if (selectedVoice.name.includes('Google') || 
+                          selectedVoice.name.includes('Samantha') || 
+                          selectedVoice.name.includes('Daniel')) {
+                    quality = 'Muy buena';
+                } else if (selectedVoice.name.includes('Microsoft')) {
+                    quality = 'Buena';
+                }
+                
+                voiceInfo.textContent = `${selectedVoice.name} • ${gender} • ${quality}`;
             }
         }
 
@@ -1232,7 +1326,7 @@
                 return;
             }
             
-            const previewText = "Hello, I'm your English tutor. I'll help you improve your speaking skills.";
+            const previewText = "Hello, I'm your English tutor. I'll help you improve your speaking skills. Listen to my natural voice.";
             speakText(previewText, true);
         }
 
@@ -1387,7 +1481,7 @@
             const time = getCurrentTime();
             const messageElement = document.createElement('div');
             
-            // Procesar texto para encontrar errores y correcciones (simulado)
+            // Procesar texto para encontrar errores y correcciones
             const processedText = processTextForErrors(text);
             
             messageElement.className = 'message bot-message';
@@ -1418,9 +1512,6 @@
         // Procesar texto para mostrar errores y correcciones
         function processTextForErrors(text) {
             // Esta función simula la detección de errores
-            // En una implementación real, usaríamos la API de Gemini para análisis gramatical
-            
-            // Simulación de detección de errores comunes
             const errorExamples = [
                 { error: "I have 30 years old", correction: "I am 30 years old" },
                 { error: "She don't like", correction: "She doesn't like" },
@@ -1524,6 +1615,18 @@
                 // Usar voz seleccionada si está disponible
                 if (selectedVoice) {
                     utterance.voice = selectedVoice;
+                } else {
+                    // Si no hay voz seleccionada, usar la mejor voz disponible
+                    const voices = window.speechSynthesis.getVoices();
+                    const preferredVoice = 
+                        voices.find(voice => voice.name.includes('Google US English')) ||
+                        voices.find(voice => voice.name.includes('Samantha')) ||
+                        voices.find(voice => voice.lang === 'en-US') ||
+                        voices[0];
+                    
+                    if (preferredVoice) {
+                        utterance.voice = preferredVoice;
+                    }
                 }
                 
                 // Configurar pausas más naturales
