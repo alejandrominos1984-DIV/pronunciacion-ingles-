@@ -196,7 +196,7 @@
                             <br><br>
                             <b>How to use:</b>
                             <br>
-                            1. Tap <i class="fas fa-microphone text-primary"></i> to start speaking. I won't interrupt you.
+                            1. Tap <i class="fas fa-microphone text-primary"></i> to start speaking.
                             <br>
                             2. When you are done, tap <i class="fas fa-paper-plane text-green-500"></i> to send.
                             <br><br>
@@ -319,8 +319,8 @@
             shouldBeListening: false,
             apiKey: '',
             voice: 'Kore',
-            finalTranscript: '',
-            cooldownActive: false
+            savedTranscript: '', // Previous sessions
+            currentSessionText: '', // Current active speech
         };
 
         let recognition = null;
@@ -374,29 +374,27 @@
                 recognition.onstart = () => {
                     state.isListening = true;
                     updateUIState('listening');
+                    state.currentSessionText = '';
                 };
 
+                // FIXED: Logic to prevent duplicates
                 recognition.onresult = (event) => {
-                    let interimTranscript = '';
-                    let currentFinal = '';
-
-                    for (let i = event.resultIndex; i < event.results.length; ++i) {
-                        if (event.results[i].isFinal) {
-                            currentFinal += event.results[i][0].transcript;
-                        } else {
-                            interimTranscript += event.results[i][0].transcript;
-                        }
+                    // Rebuild current session text from scratch every time
+                    // This avoids appending duplicates on Android Chrome
+                    let sessionFullText = '';
+                    
+                    for (let i = 0; i < event.results.length; ++i) {
+                        sessionFullText += event.results[i][0].transcript;
                     }
                     
-                    if(currentFinal) {
-                        state.finalTranscript += currentFinal + ' ';
-                    }
+                    state.currentSessionText = sessionFullText;
 
-                    // Mobile UI: Show transcript clearly
-                    const display = (state.finalTranscript + interimTranscript).trim();
-                    if(display.length > 0) {
+                    // Display Total = Saved + Current
+                    const totalDisplay = (state.savedTranscript + ' ' + state.currentSessionText).trim();
+                    
+                    if(totalDisplay.length > 0) {
                         transcriptPreview.style.display = 'block';
-                        transcriptPreview.textContent = display;
+                        transcriptPreview.textContent = totalDisplay.slice(-100); // Show last 100 chars
                         transcriptPreview.scrollTop = transcriptPreview.scrollHeight;
                     }
                 };
@@ -413,8 +411,14 @@
                 recognition.onend = () => {
                     state.isListening = false;
                     
+                    // Commit current session to saved
+                    if(state.currentSessionText) {
+                        state.savedTranscript += state.currentSessionText + ' ';
+                        state.currentSessionText = '';
+                    }
+
                     if (state.shouldBeListening) {
-                        // Restart immediately if cut off unexpectedly
+                        // Restart loop
                         try {
                             recognition.start();
                         } catch(e) {
@@ -422,7 +426,7 @@
                             updateUIState('idle');
                         }
                     } else {
-                        // User intentionally stopped
+                        // User stopped
                         processRecordedText();
                     }
                 };
@@ -434,7 +438,7 @@
         }
 
         function handleMicClick() {
-            if (!recognition || state.cooldownActive) return;
+            if (!recognition) return;
             
             // Need audio context user gesture for mobile audio playback later
             if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -446,7 +450,8 @@
                 recognition.stop();
             } else {
                 // START LISTENING ACTION
-                state.finalTranscript = '';
+                state.savedTranscript = ''; // Reset for new message
+                state.currentSessionText = '';
                 state.shouldBeListening = true;
                 try {
                     recognition.start();
@@ -461,18 +466,16 @@
             transcriptPreview.style.display = 'none';
             updateUIState('idle');
 
-            const textToSend = state.finalTranscript.trim();
+            const textToSend = state.savedTranscript.trim();
             if (textToSend.length > 1) {
                 addUserMessage(textToSend);
                 processWithGemini(textToSend);
             } else {
-                if(state.finalTranscript.length === 0 && !state.shouldBeListening) {
-                     // Only show if we intentionally stopped and nothing was heard
-                     // showNotification("Didn't catch that", "info");
-                }
+                // Only warn if empty
             }
             // Reset
-            state.finalTranscript = '';
+            state.savedTranscript = '';
+            state.currentSessionText = '';
         }
 
         // --- Gemini Interaction ---
