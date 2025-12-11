@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>English Tutor AI - Natural Voice</title>
+    <title>English Tutor AI - Stable</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -100,6 +100,7 @@
             50% { height: 24px; }
         }
 
+        /* Typing Indicator */
         .typing-indicator span {
             animation: blink 1.4s infinite both;
         }
@@ -141,21 +142,30 @@
         /* Live Transcript Preview */
         .transcript-preview {
             position: absolute;
-            bottom: 110px;
+            bottom: 120px;
             left: 20px;
             right: 20px;
-            background: rgba(255, 255, 255, 0.95);
+            background: rgba(255, 255, 255, 0.98);
             color: #333;
-            padding: 12px 16px;
+            padding: 16px;
             border-radius: 16px;
-            font-size: 15px;
+            font-size: 16px;
             text-align: center;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
             border: 1px solid #e5e7eb;
             z-index: 20;
             display: none;
-            max-height: 100px;
+            max-height: 150px;
             overflow-y: auto;
+        }
+        
+        /* Toggle Switch */
+        .toggle-checkbox:checked {
+            right: 0;
+            border-color: #4361ee;
+        }
+        .toggle-checkbox:checked + .toggle-label {
+            background-color: #4361ee;
         }
     </style>
 </head>
@@ -192,13 +202,13 @@
                     <!-- Initial Message -->
                     <div class="message self-start w-[90%] bg-white border border-gray-100 rounded-2xl rounded-tl-none p-4 shadow-sm relative pb-8">
                         <div class="text-content text-gray-700 leading-relaxed text-[15px]">
-                            Hello! I'm <b>Emma</b>. 
+                            Hello! I'm <b>Emma</b>.
                             <br><br>
-                            <b>How to use:</b>
+                            I've switched to <b>Stable Voice Mode</b> to prevent errors.
+                            <br><br>
+                            1. Tap <i class="fas fa-microphone text-primary"></i> to speak.
                             <br>
-                            1. Tap <i class="fas fa-microphone text-primary"></i> to start speaking.
-                            <br>
-                            2. When you are done, tap <i class="fas fa-paper-plane text-green-500"></i> to send.
+                            2. Tap <i class="fas fa-paper-plane text-green-500"></i> to send.
                             <br><br>
                             Please set your API Key to begin!
                         </div>
@@ -253,29 +263,28 @@
                 </button>
             </div>
             
-            <div class="space-y-5">
+            <div class="space-y-6">
                 <div>
                     <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Gemini API Key</label>
                     <input type="password" id="apiKey" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:bg-white focus:border-transparent outline-none transition-all text-sm" placeholder="Paste key here...">
-                    <p class="text-xs text-gray-400 mt-2 flex items-center gap-1">
-                        <i class="fas fa-key"></i> 
-                        Required for AI voice & logic
-                    </p>
                 </div>
 
                 <div>
-                    <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Voice Preference</label>
-                    <div class="relative">
-                        <select id="voiceSelect" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary outline-none appearance-none text-sm">
-                            <option value="Kore">Emma (Natural Female)</option>
-                            <option value="Aoede">Sophia (Natural Female)</option>
-                            <option value="Fenrir">Liam (Natural Male)</option>
-                            <option value="Puck">Noah (Natural Male)</option>
-                        </select>
-                        <div class="absolute right-3 top-3 text-gray-400 pointer-events-none">
-                            <i class="fas fa-chevron-down"></i>
+                    <div class="flex items-center justify-between mb-2">
+                        <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide">Voice Type</label>
+                        <span id="voiceTypeLabel" class="text-xs font-bold px-2 py-1 rounded bg-blue-100 text-blue-700">Browser (Stable)</span>
+                    </div>
+                    
+                    <div class="flex items-center justify-between bg-gray-50 p-3 rounded-xl border border-gray-200">
+                        <span class="text-sm font-medium text-gray-700">Enable HD Voice (Gemini)</span>
+                        <div class="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
+                            <input type="checkbox" name="toggle" id="hdVoiceToggle" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer border-gray-300"/>
+                            <label for="hdVoiceToggle" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
                         </div>
                     </div>
+                    <p class="text-[11px] text-gray-400 mt-2">
+                        <i class="fas fa-exclamation-circle"></i> HD Voice uses more quota. Turn off if you get "Traffic Limit" errors.
+                    </p>
                 </div>
 
                 <div class="pt-2 flex flex-col gap-3">
@@ -304,7 +313,8 @@
         const settingsModal = document.getElementById('settingsModal');
         const closeModal = document.getElementById('closeModal');
         const apiKeyInput = document.getElementById('apiKey');
-        const voiceSelect = document.getElementById('voiceSelect');
+        const hdVoiceToggle = document.getElementById('hdVoiceToggle');
+        const voiceTypeLabel = document.getElementById('voiceTypeLabel');
         const saveSettingsBtn = document.getElementById('saveSettingsBtn');
         const clearChatBtn = document.getElementById('clearChatBtn');
         const notification = document.getElementById('notification');
@@ -318,9 +328,9 @@
             isListening: false,
             shouldBeListening: false,
             apiKey: '',
-            voice: 'Kore',
-            savedTranscript: '', // Previous sessions
-            currentSessionText: '', // Current active speech
+            useHDVoice: false, // DEFAULT IS FALSE (Browser Voice)
+            finalTranscript: '',
+            interimTranscript: ''
         };
 
         let recognition = null;
@@ -335,14 +345,25 @@
 
         function loadSettings() {
             const savedKey = localStorage.getItem('tutor_api_key');
-            const savedVoice = localStorage.getItem('tutor_voice');
+            const useHD = localStorage.getItem('tutor_use_hd') === 'true';
+            
             if (savedKey) {
                 state.apiKey = savedKey;
                 apiKeyInput.value = savedKey;
             }
-            if (savedVoice) {
-                state.voice = savedVoice;
-                voiceSelect.value = savedVoice;
+            
+            state.useHDVoice = useHD;
+            hdVoiceToggle.checked = useHD;
+            updateVoiceLabel(useHD);
+        }
+
+        function updateVoiceLabel(isHD) {
+            if(isHD) {
+                voiceTypeLabel.textContent = "HD Voice (Gemini)";
+                voiceTypeLabel.className = "text-xs font-bold px-2 py-1 rounded bg-purple-100 text-purple-700";
+            } else {
+                voiceTypeLabel.textContent = "Browser (Stable)";
+                voiceTypeLabel.className = "text-xs font-bold px-2 py-1 rounded bg-blue-100 text-blue-700";
             }
         }
 
@@ -351,18 +372,25 @@
             settingsBtn.addEventListener('click', () => settingsModal.classList.remove('hidden', 'flex'));
             settingsBtn.addEventListener('click', () => settingsModal.classList.add('flex'));
             closeModal.addEventListener('click', () => settingsModal.classList.add('hidden'));
+            
+            hdVoiceToggle.addEventListener('change', (e) => {
+                updateVoiceLabel(e.target.checked);
+            });
+
             saveSettingsBtn.addEventListener('click', saveSettings);
+            
             clearChatBtn.addEventListener('click', () => {
                 chatMessages.innerHTML = '';
                 showNotification('Chat cleared');
                 settingsModal.classList.add('hidden');
             });
+            
             settingsModal.addEventListener('click', (e) => {
                 if (e.target === settingsModal) settingsModal.classList.add('hidden');
             });
         }
 
-        // --- Robust Speech Recognition for Mobile ---
+        // --- FIXED SPEECH RECOGNITION ENGINE ---
         function initSpeechRecognition() {
             if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
                 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -374,27 +402,29 @@
                 recognition.onstart = () => {
                     state.isListening = true;
                     updateUIState('listening');
-                    state.currentSessionText = '';
                 };
 
-                // FIXED: Logic to prevent duplicates
+                // FIXED DUPLICATE LOGIC
+                // Instead of appending strings, we rebuild from resultIndex
+                // We use state.finalTranscript as the "confirmed" bank
                 recognition.onresult = (event) => {
-                    // Rebuild current session text from scratch every time
-                    // This avoids appending duplicates on Android Chrome
-                    let sessionFullText = '';
+                    let interim = '';
                     
-                    for (let i = 0; i < event.results.length; ++i) {
-                        sessionFullText += event.results[i][0].transcript;
+                    for (let i = event.resultIndex; i < event.results.length; ++i) {
+                        if (event.results[i].isFinal) {
+                            state.finalTranscript += event.results[i][0].transcript + ' ';
+                        } else {
+                            interim += event.results[i][0].transcript;
+                        }
                     }
                     
-                    state.currentSessionText = sessionFullText;
+                    state.interimTranscript = interim;
 
-                    // Display Total = Saved + Current
-                    const totalDisplay = (state.savedTranscript + ' ' + state.currentSessionText).trim();
-                    
-                    if(totalDisplay.length > 0) {
+                    // Display preview
+                    const display = (state.finalTranscript + interim).trim();
+                    if(display.length > 0) {
                         transcriptPreview.style.display = 'block';
-                        transcriptPreview.textContent = totalDisplay.slice(-100); // Show last 100 chars
+                        transcriptPreview.textContent = display;
                         transcriptPreview.scrollTop = transcriptPreview.scrollHeight;
                     }
                 };
@@ -411,14 +441,8 @@
                 recognition.onend = () => {
                     state.isListening = false;
                     
-                    // Commit current session to saved
-                    if(state.currentSessionText) {
-                        state.savedTranscript += state.currentSessionText + ' ';
-                        state.currentSessionText = '';
-                    }
-
                     if (state.shouldBeListening) {
-                        // Restart loop
+                        // Accidental stop (Android behavior) - restart
                         try {
                             recognition.start();
                         } catch(e) {
@@ -426,37 +450,36 @@
                             updateUIState('idle');
                         }
                     } else {
-                        // User stopped
+                        // Manual stop - Process
                         processRecordedText();
                     }
                 };
             } else {
                 voiceBtn.disabled = true;
                 voiceStatus.textContent = 'Browser not supported';
-                showNotification('Use Chrome for voice features', 'error');
+                showNotification('Use Chrome/Edge', 'error');
             }
         }
 
         function handleMicClick() {
             if (!recognition) return;
             
-            // Need audio context user gesture for mobile audio playback later
+            // Audio context gesture
             if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
             if (audioContext.state === 'suspended') audioContext.resume();
 
             if (state.shouldBeListening) {
-                // STOP & SEND ACTION
+                // STOP & SEND
                 state.shouldBeListening = false; 
                 recognition.stop();
             } else {
-                // START LISTENING ACTION
-                state.savedTranscript = ''; // Reset for new message
-                state.currentSessionText = '';
+                // START
+                state.finalTranscript = ''; // Clean slate
+                state.interimTranscript = '';
                 state.shouldBeListening = true;
                 try {
                     recognition.start();
                 } catch(e) {
-                    console.error(e);
                     state.shouldBeListening = false;
                 }
             }
@@ -466,16 +489,16 @@
             transcriptPreview.style.display = 'none';
             updateUIState('idle');
 
-            const textToSend = state.savedTranscript.trim();
+            // Combine anything left
+            const textToSend = (state.finalTranscript + state.interimTranscript).trim();
+            
             if (textToSend.length > 1) {
                 addUserMessage(textToSend);
                 processWithGemini(textToSend);
-            } else {
-                // Only warn if empty
             }
-            // Reset
-            state.savedTranscript = '';
-            state.currentSessionText = '';
+            
+            state.finalTranscript = '';
+            state.interimTranscript = '';
         }
 
         // --- Gemini Interaction ---
@@ -489,19 +512,29 @@
             updateUIState('thinking');
 
             try {
-                // 1. Get Text
+                // 1. Get Text (Always needed)
                 const textResponse = await fetchGeminiText(userText);
                 addBotMessage(textResponse);
                 
-                // 2. Get Audio
+                // 2. Audio Generation (Conditional)
                 updateUIState('generating_audio');
-                await speakGemini(textResponse);
                 
+                if (state.useHDVoice) {
+                    await speakGemini(textResponse);
+                } else {
+                    speakNative(textResponse);
+                }
+
             } catch (error) {
                 console.error(error);
                 let msg = error.message;
                 if(msg.includes("429") || msg.includes("Quota")) {
-                    msg = "Traffic limit. Please wait a moment.";
+                    msg = "Traffic limit. Please switch to Browser Voice in settings.";
+                    // Auto-disable HD to help user
+                    state.useHDVoice = false;
+                    hdVoiceToggle.checked = false;
+                    updateVoiceLabel(false);
+                    localStorage.setItem('tutor_use_hd', 'false');
                 }
                 addBotMessage(`Error: ${msg}`);
                 updateUIState('idle');
@@ -579,7 +612,7 @@
             }
         }
 
-        // --- Audio ---
+        // --- Audio: HD Gemini ---
         async function speakGemini(text) {
             const cleanText = text.replace(/<[^>]*>/g, '');
             const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${state.apiKey}`;
@@ -592,7 +625,7 @@
                         contents: [{ parts: [{ text: cleanText }] }],
                         generationConfig: {
                             responseModalities: ["AUDIO"],
-                            speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: state.voice } } }
+                            speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: "Kore" } } }
                         }
                     })
                 });
@@ -604,8 +637,8 @@
                     await playPCM16(data.candidates[0].content.parts[0].inlineData.data);
                 }
             } catch (e) {
-                console.warn("TTS failed, using fallback");
-                speakNative(cleanText); // Silent fallback
+                console.warn("TTS failed, fallback to native");
+                speakNative(cleanText); 
             }
         }
 
@@ -657,14 +690,20 @@
             return new Uint8Array(buffer);
         }
 
+        // --- Audio: Native Browser ---
         function speakNative(text) {
             updateUIState('speaking');
             const cleanText = text.replace(/<[^>]*>/g, '');
             const utterance = new SpeechSynthesisUtterance(cleanText);
             utterance.lang = 'en-US';
             utterance.onend = () => updateUIState('idle');
+            
+            // Try to find a good female voice if available
             const voices = speechSynthesis.getVoices();
-            const preferred = voices.find(v => v.name.includes('Google US English')) || voices.find(v => v.lang === 'en-US');
+            const preferred = voices.find(v => v.name.includes('Google US English')) || 
+                              voices.find(v => v.lang === 'en-US' && v.name.includes('Female')) ||
+                              voices.find(v => v.lang === 'en-US');
+                              
             if(preferred) utterance.voice = preferred;
             speechSynthesis.speak(utterance);
         }
@@ -736,13 +775,16 @@
 
         function saveSettings() {
             const key = apiKeyInput.value.trim();
-            const voice = voiceSelect.value;
+            const useHD = hdVoiceToggle.checked;
+            
             if (key) {
                 state.apiKey = key;
                 localStorage.setItem('tutor_api_key', key);
             }
-            state.voice = voice;
-            localStorage.setItem('tutor_voice', voice);
+            state.useHDVoice = useHD;
+            localStorage.setItem('tutor_use_hd', useHD);
+            
+            updateVoiceLabel(useHD);
             settingsModal.classList.add('hidden');
             showNotification('Settings saved');
         }
