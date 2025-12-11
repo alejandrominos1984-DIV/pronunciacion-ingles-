@@ -150,7 +150,7 @@
                 <div class="flex-1 overflow-y-auto p-4 bg-[#f8faff] flex flex-col gap-5 chat-messages" id="chatMessages">
                     <!-- Initial Message -->
                     <div class="message self-start w-[90%] bg-white border border-gray-100 rounded-2xl rounded-tl-none p-4 shadow-sm relative pb-8">
-                        <div class="text-gray-700 leading-relaxed text-[15px]">
+                        <div class="text-content text-gray-700 leading-relaxed text-[15px]">
                             Hello! I'm <b>Emma</b>. I can hear you and speak with a natural human voice.
                             <br><br>
                             If you make a mistake, I'll show you <span class="error-mark">the error</span> <span class="correction-mark">the correction</span> like this.
@@ -158,7 +158,7 @@
                             Please click the settings gear to add your API Key first!
                         </div>
                         <!-- Translation Icon -->
-                        <button class="absolute bottom-2 right-3 text-indigo-500 hover:text-indigo-700 hover:scale-110 transition-all bg-indigo-50 p-1.5 rounded-full w-8 h-8 flex items-center justify-center shadow-sm" title="Translate">
+                        <button onclick="translateMessage(this)" class="absolute bottom-2 right-3 text-indigo-500 hover:text-indigo-700 hover:scale-110 transition-all bg-indigo-50 p-1.5 rounded-full w-8 h-8 flex items-center justify-center shadow-sm z-10" title="Translate">
                             <i class="fas fa-language"></i>
                         </button>
                     </div>
@@ -436,6 +436,77 @@
             return data.candidates[0].content.parts[0].text;
         }
 
+        // --- Translation Feature ---
+        async function translateMessage(btn) {
+            if (!state.apiKey) {
+                showNotification("Please set API Key first", "error");
+                return;
+            }
+
+            const messageDiv = btn.parentElement;
+            const textContainer = messageDiv.querySelector('.text-content');
+            
+            // Check if translation already exists
+            let translationDiv = messageDiv.querySelector('.translation-result');
+            
+            if (translationDiv) {
+                // Toggle visibility
+                if (translationDiv.style.display === 'none') {
+                     translationDiv.style.display = 'block';
+                     btn.classList.add('text-indigo-700', 'bg-indigo-100');
+                } else {
+                     translationDiv.style.display = 'none';
+                     btn.classList.remove('text-indigo-700', 'bg-indigo-100');
+                }
+                return;
+            }
+
+            // Visual loading state
+            const originalIcon = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            btn.disabled = true;
+
+            const textToTranslate = textContainer.innerText;
+
+            try {
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${state.apiKey}`;
+                
+                const prompt = `Translate the following English text to Spanish. Provide ONLY the Spanish translation, nothing else. Text: "${textToTranslate}"`;
+
+                const payload = {
+                    contents: [{ parts: [{ text: prompt }] }]
+                };
+
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                if (!response.ok) throw new Error('Translation failed');
+                
+                const data = await response.json();
+                const translatedText = data.candidates[0].content.parts[0].text;
+
+                if (translatedText) {
+                    translationDiv = document.createElement('div');
+                    translationDiv.className = 'translation-result text-[14px] text-indigo-600 mt-3 pt-2 border-t border-gray-100 font-medium italic';
+                    translationDiv.innerText = translatedText;
+                    
+                    // Insert before the button
+                    messageDiv.insertBefore(translationDiv, btn);
+                    btn.classList.add('text-indigo-700', 'bg-indigo-100');
+                }
+            } catch (e) {
+                console.error("Translation error", e);
+                showNotification("Translation failed", "error");
+            } finally {
+                // Reset button
+                btn.innerHTML = '<i class="fas fa-language"></i>';
+                btn.disabled = false;
+            }
+        }
+
         async function speakGemini(text) {
             // Remove HTML tags for speech
             const cleanText = text.replace(/<[^>]*>/g, '');
@@ -586,7 +657,7 @@
             div.className = 'message self-start w-[90%] max-w-sm bg-white border border-gray-100 rounded-2xl rounded-tl-none p-4 shadow-sm relative pb-8';
             
             div.innerHTML = `
-                <div class="text-gray-700 leading-relaxed text-[15px]">${html}</div>
+                <div class="text-content text-gray-700 leading-relaxed text-[15px]">${html}</div>
                 
                 <button onclick="translateMessage(this)" class="absolute bottom-2 right-2 text-indigo-500 hover:text-indigo-700 hover:scale-110 transition-all bg-indigo-50 p-1.5 rounded-full w-8 h-8 flex items-center justify-center shadow-sm" title="Translate">
                     <i class="fas fa-language"></i>
@@ -594,18 +665,6 @@
             `;
             chatMessages.appendChild(div);
             scrollToBottom();
-        }
-
-        // Dummy translation function for the visual element
-        function translateMessage(btn) {
-            const textContainer = btn.parentElement.querySelector('div');
-            // Visual feedback
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-            setTimeout(() => {
-                btn.innerHTML = '<i class="fas fa-check"></i>';
-                // Reset after a moment
-                setTimeout(() => btn.innerHTML = '<i class="fas fa-language"></i>', 1500);
-            }, 800);
         }
 
         function updateUIState(status) {
