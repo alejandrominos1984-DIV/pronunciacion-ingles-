@@ -110,8 +110,9 @@
         .error-mark {
             color: #ef4444; /* red-500 */
             text-decoration: line-through;
-            opacity: 0.8;
+            opacity: 0.9;
             margin-right: 4px;
+            font-weight: 500;
         }
         
         .correction-mark {
@@ -466,12 +467,25 @@
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
             btn.disabled = true;
 
-            const textToTranslate = textContainer.innerText;
+            // Get HTML to preserve formatting tags (red/green spans)
+            const contentToTranslate = textContainer.innerHTML.trim();
 
             try {
                 const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${state.apiKey}`;
                 
-                const prompt = `Translate the following English text to Spanish. Provide ONLY the Spanish translation, nothing else. Text: "${textToTranslate}"`;
+                // Prompt Engineering: Ensure HTML tags are preserved and inner English words are NOT translated
+                const prompt = `
+                    You are a translator for an English learning app.
+                    Task: Translate the following HTML content to Spanish.
+                    
+                    CRITICAL RULES:
+                    1. Keep any text inside <span class="error-mark">...</span> AND <span class="correction-mark">...</span> tags EXACTLY as is (in English). Do NOT translate the words inside these tags.
+                    2. Keep the <span> tags themselves intact with their classes.
+                    3. Translate the surrounding conversational text to natural Spanish.
+                    4. Do not output markdown code fences. Just return the raw string.
+                    
+                    Input to translate: "${contentToTranslate}"
+                `;
 
                 const payload = {
                     contents: [{ parts: [{ text: prompt }] }]
@@ -486,12 +500,15 @@
                 if (!response.ok) throw new Error('Translation failed');
                 
                 const data = await response.json();
-                const translatedText = data.candidates[0].content.parts[0].text;
+                let translatedContent = data.candidates[0].content.parts[0].text;
 
-                if (translatedText) {
+                // Cleanup markdown if present
+                translatedContent = translatedContent.replace(/```html/g, '').replace(/```/g, '').trim();
+
+                if (translatedContent) {
                     translationDiv = document.createElement('div');
-                    translationDiv.className = 'translation-result text-[14px] text-indigo-600 mt-3 pt-2 border-t border-gray-100 font-medium italic';
-                    translationDiv.innerText = translatedText;
+                    translationDiv.className = 'translation-result text-[15px] text-indigo-600 mt-3 pt-2 border-t border-gray-100 font-medium';
+                    translationDiv.innerHTML = translatedContent; // Use innerHTML to render the colors
                     
                     // Insert before the button
                     messageDiv.insertBefore(translationDiv, btn);
