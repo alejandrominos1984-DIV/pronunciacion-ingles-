@@ -2,557 +2,395 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>English Tutor AI - Stable</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prof. Alex - AI English Tutor</title>
+    <!-- Tailwind CSS para diseño moderno -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome para iconos -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    
     <script>
         tailwind.config = {
             theme: {
                 extend: {
-                    colors: {
-                        primary: '#4361ee',
-                        'primary-light': '#4895ef',
-                        secondary: '#3a0ca3',
-                        accent: '#f72585',
-                        success: '#4cc9f0',
-                        correction: '#2ec4b6',
-                    },
                     fontFamily: {
                         sans: ['Inter', 'sans-serif'],
-                        display: ['Poppins', 'sans-serif'],
+                    },
+                    colors: {
+                        primary: '#2563EB', // Azul moderno
+                        secondary: '#F3F4F6',
+                        success: '#10B981',
+                        error: '#EF4444',
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'wave': 'wave 1.2s ease-in-out infinite',
+                    },
+                    keyframes: {
+                        wave: {
+                            '0%, 100%': { height: '10px' },
+                            '50%': { height: '24px' },
+                        }
                     }
                 }
             }
         }
     </script>
     <style>
+        /* Estilos personalizados para scrollbar y detalles finos */
         body {
-            background: linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%);
-            min-height: 100vh;
+            background-color: #ffffff;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .chat-container {
+            flex: 1;
+            overflow-y: auto;
+            scroll-behavior: smooth;
+            padding-bottom: 120px; /* Espacio para el footer */
+        }
+
+        .chat-container::-webkit-scrollbar {
+            width: 6px;
+        }
+        .chat-container::-webkit-scrollbar-thumb {
+            background-color: #E5E7EB;
+            border-radius: 3px;
+        }
+
+        /* Animación de ondas de sonido */
+        .sound-wave-container {
             display: flex;
             align-items: center;
             justify-content: center;
-            overscroll-behavior: none;
+            gap: 4px;
+            height: 30px;
+            opacity: 0;
+            transition: opacity 0.3s;
         }
+        .sound-wave-container.active {
+            opacity: 1;
+        }
+        .bar {
+            width: 4px;
+            background-color: #2563EB;
+            border-radius: 2px;
+            animation: wave 1s ease-in-out infinite;
+        }
+        .bar:nth-child(2) { animation-delay: 0.1s; }
+        .bar:nth-child(3) { animation-delay: 0.2s; }
+        .bar:nth-child(4) { animation-delay: 0.3s; }
+        .bar:nth-child(5) { animation-delay: 0.4s; }
 
-        .chat-container {
-            height: 100dvh;
-            max-height: 100dvh;
+        /* Botón de micrófono pulsante */
+        .mic-button-shadow {
+            box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.7);
+            animation: pulse-blue 2s infinite;
         }
-        
-        @media (min-width: 768px) {
-            .chat-container {
-                height: 85vh;
-                min-height: 600px;
-                max-height: 800px;
-            }
-        }
-
-        .message {
-            animation: fadeIn 0.3s ease;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        /* Microphone/Send Button States */
-        .voice-btn {
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        .voice-btn.listening {
-            background: #10b981 !important; /* Green for Send */
-            box-shadow: 0 0 0 8px rgba(16, 185, 129, 0.3);
-            transform: scale(1.1);
-        }
-        
-        .voice-btn.listening i {
-            animation: bounce-right 1s infinite;
-        }
-
-        @keyframes bounce-right {
-            0%, 100% { transform: translateX(0); }
-            50% { transform: translateX(3px); }
-        }
-
-        .voice-btn.speaking {
-            background: linear-gradient(to right, #4cc9f0, #4361ee);
-            box-shadow: 0 0 20px rgba(67, 97, 238, 0.4);
-        }
-
-        /* Sound Wave Animation */
-        .wave-bar {
-            animation: soundWave 1.2s ease infinite;
-        }
-        .wave-bar:nth-child(2) { animation-delay: 0.1s; }
-        .wave-bar:nth-child(3) { animation-delay: 0.2s; }
-        .wave-bar:nth-child(4) { animation-delay: 0.3s; }
-        .wave-bar:nth-child(5) { animation-delay: 0.4s; }
-
-        @keyframes soundWave {
-            0%, 100% { height: 8px; }
-            50% { height: 24px; }
-        }
-
-        /* Typing Indicator */
-        .typing-indicator span {
-            animation: blink 1.4s infinite both;
-        }
-        .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
-        .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
-
-        @keyframes blink {
-            0% { opacity: 0.2; }
-            20% { opacity: 1; }
-            100% { opacity: 0.2; }
-        }
-
-        /* Scrollbar styling */
-        .chat-messages::-webkit-scrollbar {
-            width: 6px;
-        }
-        .chat-messages::-webkit-scrollbar-track {
-            background: #f1f1f1;
-        }
-        .chat-messages::-webkit-scrollbar-thumb {
-            background: #c1c1c1;
-            border-radius: 10px;
-        }
-
-        /* Custom error formatting */
-        .error-mark {
-            color: #ef4444; /* red-500 */
-            text-decoration: line-through;
-            opacity: 0.9;
-            margin-right: 4px;
-            font-weight: 500;
-        }
-        
-        .correction-mark {
-            color: #16a34a; /* green-600 */
-            font-weight: 700;
-        }
-
-        /* Live Transcript Preview */
-        .transcript-preview {
-            position: absolute;
-            bottom: 120px;
-            left: 20px;
-            right: 20px;
-            background: rgba(255, 255, 255, 0.98);
-            color: #333;
-            padding: 16px;
-            border-radius: 16px;
-            font-size: 16px;
-            text-align: center;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-            border: 1px solid #e5e7eb;
-            z-index: 20;
-            display: none;
-            max-height: 150px;
-            overflow-y: auto;
-        }
-        
-        /* Toggle Switch */
-        .toggle-checkbox:checked {
-            right: 0;
-            border-color: #4361ee;
-        }
-        .toggle-checkbox:checked + .toggle-label {
-            background-color: #4361ee;
+        @keyframes pulse-blue {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 20px rgba(37, 99, 235, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(37, 99, 235, 0); }
         }
     </style>
 </head>
-<body class="font-sans text-gray-800 p-0 md:p-4">
+<body class="text-gray-800">
 
-    <div class="max-w-md w-full mx-auto relative h-full">
-        
-        <!-- Main Content -->
-        <main class="w-full h-full">
-            <div class="bg-white md:rounded-3xl shadow-2xl overflow-hidden flex flex-col chat-container border-0 md:border border-white/50 backdrop-blur-sm">
-                
-                <!-- Chat Header -->
-                <div class="bg-white p-4 flex items-center justify-between border-b border-gray-100 shadow-sm z-10 sticky top-0">
-                    <div class="flex items-center gap-4">
-                        <div class="relative">
-                            <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-4.0.3&auto=format&fit=crop&w=150&q=80" alt="Avatar" class="w-10 h-10 md:w-12 md:h-12 rounded-full border-2 border-primary p-0.5 object-cover">
-                            <div class="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></div>
-                        </div>
-                        <div>
-                            <h2 class="font-display font-bold text-lg text-gray-800 leading-tight" id="botNameDisplay">Professor Emma</h2>
-                            <div class="flex items-center gap-2">
-                                <p class="text-xs text-primary font-medium bg-blue-50 px-2 py-0.5 rounded-full inline-block">AI English Tutor</p>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <button id="settingsBtn" class="w-10 h-10 rounded-full bg-gray-50 hover:bg-gray-100 flex items-center justify-center text-gray-500 transition-all duration-300">
-                        <i class="fas fa-cog text-lg"></i>
-                    </button>
-                </div>
-
-                <!-- Messages Area -->
-                <div class="flex-1 overflow-y-auto p-4 bg-[#f8faff] flex flex-col gap-5 chat-messages" id="chatMessages">
-                    <!-- Initial Message -->
-                    <div class="message self-start w-[90%] bg-white border border-gray-100 rounded-2xl rounded-tl-none p-4 shadow-sm relative pb-8">
-                        <div class="text-content text-gray-700 leading-relaxed text-[15px]">
-                            Hello! I'm <b>Emma</b>.
-                            <br><br>
-                            I've switched to <b>Stable Voice Mode</b> to prevent errors.
-                            <br><br>
-                            1. Tap <i class="fas fa-microphone text-primary"></i> to speak.
-                            <br>
-                            2. Tap <i class="fas fa-paper-plane text-green-500"></i> to send.
-                            <br><br>
-                            Please set your API Key to begin!
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Live Transcript Preview -->
-                <div id="transcriptPreview" class="transcript-preview">
-                    Listening...
-                </div>
-
-                <!-- Typing Indicator -->
-                <div id="typingIndicator" class="hidden px-6 py-3 bg-[#f8faff] text-center border-t border-gray-100">
-                    <div class="inline-flex items-center gap-3 text-gray-400 text-xs font-medium uppercase tracking-wider bg-white px-4 py-2 rounded-full shadow-sm">
-                        <span id="statusText">Emma is thinking...</span>
-                        <div class="typing-indicator flex gap-1">
-                            <span class="w-1.5 h-1.5 bg-primary rounded-full"></span>
-                            <span class="w-1.5 h-1.5 bg-primary rounded-full"></span>
-                            <span class="w-1.5 h-1.5 bg-primary rounded-full"></span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Controls Area -->
-                <div class="bg-white p-6 pb-8 md:pb-8 border-t border-gray-50 flex flex-col items-center gap-4 relative md:rounded-b-3xl safe-area-bottom">
-                    <!-- Sound Wave Visualizer -->
-                    <div class="flex items-center justify-center gap-1 h-8 absolute -top-4 bg-white px-4 rounded-full shadow-md border border-gray-50" id="soundWave" style="display: none;">
-                        <div class="wave-bar w-1 bg-gradient-to-t from-primary to-accent rounded-full h-3"></div>
-                        <div class="wave-bar w-1 bg-gradient-to-t from-primary to-accent rounded-full h-3"></div>
-                        <div class="wave-bar w-1 bg-gradient-to-t from-primary to-accent rounded-full h-3"></div>
-                        <div class="wave-bar w-1 bg-gradient-to-t from-primary to-accent rounded-full h-3"></div>
-                        <div class="wave-bar w-1 bg-gradient-to-t from-primary to-accent rounded-full h-3"></div>
-                    </div>
-
-                    <button id="voiceBtn" class="voice-btn w-20 h-20 rounded-full bg-gradient-to-br from-primary to-secondary text-white text-3xl shadow-xl shadow-indigo-500/20 flex items-center justify-center active:scale-95 disabled:opacity-70 disabled:scale-95">
-                        <i class="fas fa-microphone"></i>
-                    </button>
-                    
-                    <p class="text-sm text-gray-400 font-medium" id="voiceStatus">Tap to speak</p>
-                </div>
+    <!-- Header -->
+    <header class="bg-white border-b border-gray-100 p-4 flex items-center justify-between sticky top-0 z-10 shadow-sm">
+        <div class="flex items-center gap-3">
+            <div class="relative">
+                <img src="https://randomuser.me/api/portraits/men/32.jpg" alt="Prof. Alex" class="w-12 h-12 rounded-full object-cover border-2 border-white shadow-md">
+                <div class="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></div>
             </div>
-        </main>
-    </div>
+            <div>
+                <h1 class="font-bold text-lg text-gray-900 leading-tight">Prof. Alex</h1>
+                <p class="text-xs text-blue-600 font-medium">AI English Tutor</p>
+            </div>
+        </div>
+        <button id="settingsBtn" class="text-gray-400 hover:text-gray-600 transition p-2">
+            <i class="fa-solid fa-gear text-xl"></i>
+        </button>
+    </header>
 
-    <!-- Settings Modal -->
-    <div id="settingsModal" class="fixed inset-0 bg-black/60 backdrop-blur-md z-50 hidden items-center justify-center p-4">
-        <div class="bg-white rounded-3xl w-full max-w-sm p-6 shadow-2xl transform transition-all scale-100">
-            <div class="flex justify-between items-center mb-6">
-                <h2 class="font-display font-bold text-xl text-gray-800">Settings</h2>
-                <button id="closeModal" class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 hover:bg-red-50 hover:text-red-500 transition-colors">
-                    <i class="fas fa-times"></i>
+    <!-- Chat Area -->
+    <main id="chatArea" class="chat-container p-4 bg-gray-50">
+        <!-- Mensaje de bienvenida -->
+        <div class="flex gap-3 mb-6 animate-fade-in">
+            <img src="https://randomuser.me/api/portraits/men/32.jpg" class="w-8 h-8 rounded-full self-start mt-1">
+            <div class="flex flex-col max-w-[85%]">
+                <div class="bg-white p-4 rounded-2xl rounded-tl-none shadow-sm border border-gray-100 text-gray-700">
+                    <p>Hello! I'm Prof. Alex. I'm here to help you practice English. We can talk about any topic you like. If you make a mistake, I'll help you correct it. What should we talk about today?</p>
+                </div>
+                <!-- Botón de traducción -->
+                <button onclick="translateText('Hello! I\'m Prof. Alex...')" class="self-end mt-1 text-xs text-gray-400 hover:text-blue-500 flex items-center gap-1 bg-white px-2 py-1 rounded-full border border-gray-100 shadow-sm transition-all">
+                    <i class="fa-solid fa-language"></i> Traducir
                 </button>
             </div>
+        </div>
+    </main>
+
+    <!-- Footer / Input Area -->
+    <footer class="bg-white p-4 fixed bottom-0 w-full border-t border-gray-100 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] z-20">
+        
+        <!-- Indicador de escucha (Ondas) -->
+        <div id="listeningIndicator" class="absolute -top-10 left-0 w-full flex justify-center sound-wave-container">
+            <div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div>
+        </div>
+
+        <div class="flex flex-col items-center justify-center relative">
+            <p id="statusText" class="text-sm text-gray-400 mb-4 h-5">Presiona el micrófono para hablar</p>
             
-            <div class="space-y-6">
-                <div>
-                    <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Gemini API Key</label>
-                    <input type="password" id="apiKey" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:bg-white focus:border-transparent outline-none transition-all text-sm" placeholder="Paste key here...">
-                </div>
+            <button id="micBtn" class="w-16 h-16 bg-blue-600 hover:bg-blue-700 text-white rounded-full flex items-center justify-center transition-all shadow-lg active:scale-95">
+                <i class="fa-solid fa-microphone text-2xl"></i>
+            </button>
+        </div>
+    </footer>
 
-                <div>
-                    <div class="flex items-center justify-between mb-2">
-                        <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide">Voice Type</label>
-                        <span id="voiceTypeLabel" class="text-xs font-bold px-2 py-1 rounded bg-blue-100 text-blue-700">Browser (Stable)</span>
-                    </div>
-                    
-                    <div class="flex items-center justify-between bg-gray-50 p-3 rounded-xl border border-gray-200">
-                        <span class="text-sm font-medium text-gray-700">Enable HD Voice (Gemini)</span>
-                        <div class="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
-                            <input type="checkbox" name="toggle" id="hdVoiceToggle" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer border-gray-300"/>
-                            <label for="hdVoiceToggle" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
-                        </div>
-                    </div>
-                    <p class="text-[11px] text-gray-400 mt-2">
-                        <i class="fas fa-exclamation-circle"></i> HD Voice uses more quota. Turn off if you get "Traffic Limit" errors.
-                    </p>
-                </div>
-
-                <div class="pt-2 flex flex-col gap-3">
-                    <button id="saveSettingsBtn" class="w-full py-3 bg-primary hover:bg-secondary text-white rounded-xl transition-all font-semibold shadow-lg shadow-blue-500/30 active:scale-[0.98]">Save Changes</button>
-                    <button id="clearChatBtn" class="w-full py-3 text-gray-500 hover:text-gray-700 hover:bg-gray-50 rounded-xl transition-colors font-medium text-sm">Clear Conversation</button>
-                </div>
+    <!-- Modal de Configuración (API Key) -->
+    <div id="settingsModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden items-center justify-center z-50">
+        <div class="bg-white rounded-2xl p-6 w-[90%] max-w-md shadow-2xl transform transition-all scale-100">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="font-bold text-lg text-gray-800">Configuración</h3>
+                <button id="closeSettings" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-times"></i></button>
             </div>
-        </div>
-    </div>
+            
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Google Gemini API Key</label>
+                <input type="password" id="apiKeyInput" placeholder="Pega tu API Key aquí..." class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition">
+                <p class="text-xs text-gray-500 mt-2">
+                    Necesitas una API Key gratuita de <a href="https://aistudio.google.com/" target="_blank" class="text-blue-600 underline">Google AI Studio</a>.
+                </p>
+            </div>
 
-    <!-- Notification Toast -->
-    <div id="notification" class="fixed top-6 left-1/2 transform -translate-x-1/2 bg-white/90 backdrop-blur border border-gray-200 text-gray-800 px-6 py-3 rounded-full shadow-lg flex items-center gap-3 transition-all duration-300 -translate-y-24 opacity-0 z-50">
-        <div class="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center text-green-500">
-            <i class="fas fa-check text-xs"></i>
+            <button id="saveSettings" class="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition">Guardar</button>
         </div>
-        <span id="notificationText" class="text-sm font-semibold">Settings saved</span>
     </div>
 
     <script>
-        // DOM Elements
-        const chatMessages = document.getElementById('chatMessages');
-        const voiceBtn = document.getElementById('voiceBtn');
-        const voiceStatus = document.getElementById('voiceStatus');
-        const soundWave = document.getElementById('soundWave');
-        const settingsBtn = document.getElementById('settingsBtn');
-        const settingsModal = document.getElementById('settingsModal');
-        const closeModal = document.getElementById('closeModal');
-        const apiKeyInput = document.getElementById('apiKey');
-        const hdVoiceToggle = document.getElementById('hdVoiceToggle');
-        const voiceTypeLabel = document.getElementById('voiceTypeLabel');
-        const saveSettingsBtn = document.getElementById('saveSettingsBtn');
-        const clearChatBtn = document.getElementById('clearChatBtn');
-        const notification = document.getElementById('notification');
-        const notificationText = document.getElementById('notificationText');
-        const typingIndicator = document.getElementById('typingIndicator');
-        const statusText = document.getElementById('statusText');
-        const transcriptPreview = document.getElementById('transcriptPreview');
-
-        // State
-        let state = {
+        // --- Estado de la Aplicación ---
+        const state = {
+            apiKey: localStorage.getItem('gemini_api_key') || '',
             isListening: false,
-            shouldBeListening: false,
-            apiKey: '',
-            useHDVoice: false, // DEFAULT IS FALSE (Browser Voice)
-            finalTranscript: '',
-            interimTranscript: ''
+            recognition: null,
+            synthesis: window.speechSynthesis,
+            messages: []
         };
 
-        let recognition = null;
-        let audioContext = null;
+        // --- Referencias al DOM ---
+        const els = {
+            micBtn: document.getElementById('micBtn'),
+            chatArea: document.getElementById('chatArea'),
+            listeningIndicator: document.getElementById('listeningIndicator'),
+            statusText: document.getElementById('statusText'),
+            settingsBtn: document.getElementById('settingsBtn'),
+            settingsModal: document.getElementById('settingsModal'),
+            closeSettings: document.getElementById('closeSettings'),
+            saveSettings: document.getElementById('saveSettings'),
+            apiKeyInput: document.getElementById('apiKeyInput')
+        };
 
-        // --- Initialization ---
-        document.addEventListener('DOMContentLoaded', () => {
-            loadSettings();
-            initSpeechRecognition();
-            setupEventListeners();
-        });
-
-        function loadSettings() {
-            const savedKey = localStorage.getItem('tutor_api_key');
-            const useHD = localStorage.getItem('tutor_use_hd') === 'true';
-            
-            if (savedKey) {
-                state.apiKey = savedKey;
-                apiKeyInput.value = savedKey;
-            }
-            
-            state.useHDVoice = useHD;
-            hdVoiceToggle.checked = useHD;
-            updateVoiceLabel(useHD);
-        }
-
-        function updateVoiceLabel(isHD) {
-            if(isHD) {
-                voiceTypeLabel.textContent = "HD Voice (Gemini)";
-                voiceTypeLabel.className = "text-xs font-bold px-2 py-1 rounded bg-purple-100 text-purple-700";
-            } else {
-                voiceTypeLabel.textContent = "Browser (Stable)";
-                voiceTypeLabel.className = "text-xs font-bold px-2 py-1 rounded bg-blue-100 text-blue-700";
-            }
-        }
-
-        function setupEventListeners() {
-            voiceBtn.addEventListener('click', handleMicClick);
-            settingsBtn.addEventListener('click', () => settingsModal.classList.remove('hidden', 'flex'));
-            settingsBtn.addEventListener('click', () => settingsModal.classList.add('flex'));
-            closeModal.addEventListener('click', () => settingsModal.classList.add('hidden'));
-            
-            hdVoiceToggle.addEventListener('change', (e) => {
-                updateVoiceLabel(e.target.checked);
-            });
-
-            saveSettingsBtn.addEventListener('click', saveSettings);
-            
-            clearChatBtn.addEventListener('click', () => {
-                chatMessages.innerHTML = '';
-                showNotification('Chat cleared');
-                settingsModal.classList.add('hidden');
-            });
-            
-            settingsModal.addEventListener('click', (e) => {
-                if (e.target === settingsModal) settingsModal.classList.add('hidden');
-            });
-        }
-
-        // --- FIXED SPEECH RECOGNITION ENGINE ---
-        function initSpeechRecognition() {
+        // --- Configuración Inicial ---
+        function init() {
+            // Configurar Web Speech API (Reconocimiento)
             if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
                 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-                recognition = new SpeechRecognition();
-                recognition.continuous = true; 
-                recognition.interimResults = true; 
-                recognition.lang = 'en-US';
+                state.recognition = new SpeechRecognition();
+                state.recognition.lang = 'en-US'; // Escucha en inglés
+                state.recognition.interimResults = false;
+                state.recognition.maxAlternatives = 1;
 
-                recognition.onstart = () => {
+                state.recognition.onstart = () => {
                     state.isListening = true;
                     updateUIState('listening');
                 };
 
-                // FIXED DUPLICATE LOGIC
-                // Instead of appending strings, we rebuild from resultIndex
-                // We use state.finalTranscript as the "confirmed" bank
-                recognition.onresult = (event) => {
-                    let interim = '';
-                    
-                    for (let i = event.resultIndex; i < event.results.length; ++i) {
-                        if (event.results[i].isFinal) {
-                            state.finalTranscript += event.results[i][0].transcript + ' ';
-                        } else {
-                            interim += event.results[i][0].transcript;
-                        }
-                    }
-                    
-                    state.interimTranscript = interim;
-
-                    // Display preview
-                    const display = (state.finalTranscript + interim).trim();
-                    if(display.length > 0) {
-                        transcriptPreview.style.display = 'block';
-                        transcriptPreview.textContent = display;
-                        transcriptPreview.scrollTop = transcriptPreview.scrollHeight;
-                    }
+                state.recognition.onend = () => {
+                    state.isListening = false;
+                    updateUIState('idle');
                 };
 
-                recognition.onerror = (event) => {
-                    if(event.error === 'no-speech') return;
-                    if(event.error === 'not-allowed') {
-                        state.shouldBeListening = false;
-                        updateUIState('idle');
-                        showNotification('Mic permission denied', 'error');
-                    }
+                state.recognition.onresult = (event) => {
+                    const transcript = event.results[0][0].transcript;
+                    handleUserMessage(transcript);
                 };
                 
-                recognition.onend = () => {
+                state.recognition.onerror = (event) => {
+                    console.error('Speech recognition error', event.error);
+                    updateUIState('error');
                     state.isListening = false;
-                    
-                    if (state.shouldBeListening) {
-                        // Accidental stop (Android behavior) - restart
-                        try {
-                            recognition.start();
-                        } catch(e) {
-                            state.shouldBeListening = false;
-                            updateUIState('idle');
-                        }
-                    } else {
-                        // Manual stop - Process
-                        processRecordedText();
-                    }
                 };
+
             } else {
-                voiceBtn.disabled = true;
-                voiceStatus.textContent = 'Browser not supported';
-                showNotification('Use Chrome/Edge', 'error');
+                alert("Tu navegador no soporta reconocimiento de voz. Por favor usa Chrome o Edge.");
+                els.micBtn.disabled = true;
             }
+
+            // Pre-llenar API Key si existe
+            if (state.apiKey) els.apiKeyInput.value = state.apiKey;
         }
 
-        function handleMicClick() {
-            if (!recognition) return;
-            
-            // Audio context gesture
-            if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            if (audioContext.state === 'suspended') audioContext.resume();
-
-            if (state.shouldBeListening) {
-                // STOP & SEND
-                state.shouldBeListening = false; 
-                recognition.stop();
+        // --- Manejo de la Interfaz (UI) ---
+        function updateUIState(status) {
+            if (status === 'listening') {
+                els.listeningIndicator.classList.add('active');
+                els.micBtn.classList.add('mic-button-shadow');
+                els.micBtn.classList.replace('bg-blue-600', 'bg-red-500');
+                els.micBtn.innerHTML = '<i class="fa-solid fa-stop text-2xl"></i>';
+                els.statusText.textContent = "Listening...";
+                els.statusText.classList.add('text-blue-600');
+            } else if (status === 'processing') {
+                els.listeningIndicator.classList.remove('active');
+                els.micBtn.classList.remove('mic-button-shadow');
+                els.micBtn.classList.replace('bg-red-500', 'bg-gray-400');
+                els.micBtn.disabled = true;
+                els.micBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-2xl"></i>';
+                els.statusText.textContent = "Thinking...";
+                els.statusText.classList.remove('text-blue-600');
             } else {
-                // START
-                state.finalTranscript = ''; // Clean slate
-                state.interimTranscript = '';
-                state.shouldBeListening = true;
-                try {
-                    recognition.start();
-                } catch(e) {
-                    state.shouldBeListening = false;
-                }
+                els.listeningIndicator.classList.remove('active');
+                els.micBtn.classList.remove('mic-button-shadow');
+                els.micBtn.classList.remove('bg-gray-400', 'bg-red-500');
+                els.micBtn.classList.add('bg-blue-600');
+                els.micBtn.disabled = false;
+                els.micBtn.innerHTML = '<i class="fa-solid fa-microphone text-2xl"></i>';
+                els.statusText.textContent = "Presiona para hablar";
             }
         }
 
-        function processRecordedText() {
-            transcriptPreview.style.display = 'none';
-            updateUIState('idle');
-
-            // Combine anything left
-            const textToSend = (state.finalTranscript + state.interimTranscript).trim();
-            
-            if (textToSend.length > 1) {
-                addUserMessage(textToSend);
-                processWithGemini(textToSend);
-            }
-            
-            state.finalTranscript = '';
-            state.interimTranscript = '';
+        function scrollToBottom() {
+            els.chatArea.scrollTop = els.chatArea.scrollHeight;
         }
 
-        // --- Gemini Interaction ---
+        // --- Renderizado de Mensajes ---
+        function renderUserMessage(text) {
+            const html = `
+                <div class="flex flex-col items-end mb-6 animate-fade-in">
+                    <div class="bg-blue-600 text-white p-4 rounded-2xl rounded-tr-none shadow-md max-w-[85%] text-left">
+                        <p>${text}</p>
+                    </div>
+                    <button onclick="translateText('${escapeHtml(text)}')" class="mt-1 mr-1 text-xs text-gray-400 hover:text-blue-500 flex items-center gap-1 bg-white px-2 py-1 rounded-full border border-gray-100 shadow-sm transition-all">
+                        <i class="fa-solid fa-language"></i> Traducir
+                    </button>
+                </div>
+            `;
+            els.chatArea.insertAdjacentHTML('beforeend', html);
+            scrollToBottom();
+        }
 
-        async function processWithGemini(userText) {
+        function renderBotResponse(data) {
+            let correctionBlock = '';
+
+            // Si hay corrección, generamos el bloque específico
+            if (data.correction && data.correction.hasError) {
+                // Parseamos el texto para colorear: Esperamos formato del prompt [wrong]word[/wrong] -> [correct]word[/correct]
+                // Simplificación: El prompt devolverá HTML básico seguro
+                
+                correctionBlock = `
+                    <div class="bg-white p-4 rounded-xl shadow-sm border-l-4 border-green-500 mb-3 w-full">
+                        <div class="flex items-center gap-2 mb-2">
+                            <i class="fa-solid fa-circle-check text-green-500"></i>
+                            <h4 class="text-xs font-bold text-gray-500 uppercase tracking-wide">Corrección Sugerida:</h4>
+                        </div>
+                        <p class="text-gray-800 text-lg leading-relaxed">
+                            ${data.correction.htmlDisplay}
+                        </p>
+                    </div>
+                `;
+            }
+
+            const html = `
+                <div class="flex gap-3 mb-6 animate-fade-in">
+                    <img src="https://randomuser.me/api/portraits/men/32.jpg" class="w-8 h-8 rounded-full self-start mt-1">
+                    <div class="flex flex-col max-w-[90%]">
+                        
+                        ${correctionBlock}
+
+                        <div class="bg-white p-4 rounded-2xl rounded-tl-none shadow-sm border border-gray-100 text-gray-700">
+                            <p>${data.response}</p>
+                        </div>
+                        
+                        <button onclick="translateText('${escapeHtml(data.response)}')" class="self-end mt-1 text-xs text-gray-400 hover:text-blue-500 flex items-center gap-1 bg-white px-2 py-1 rounded-full border border-gray-100 shadow-sm transition-all">
+                            <i class="fa-solid fa-language"></i> Traducir
+                        </button>
+                    </div>
+                </div>
+            `;
+            els.chatArea.insertAdjacentHTML('beforeend', html);
+            scrollToBottom();
+            
+            // Hablar la respuesta
+            speakText(data.response);
+        }
+
+        // --- Lógica Principal (API de Gemini) ---
+        async function handleUserMessage(text) {
+            renderUserMessage(text);
+            updateUIState('processing');
+
             if (!state.apiKey) {
-                addBotMessage("Please enter your API Key in settings to start chatting!");
+                renderSystemMessage("⚠️ Por favor configura tu API Key en el icono de engranaje.");
+                updateUIState('idle');
                 return;
             }
 
-            updateUIState('thinking');
-
             try {
-                // 1. Get Text (Always needed)
-                const textResponse = await fetchGeminiText(userText);
-                addBotMessage(textResponse);
-                
-                // 2. Audio Generation (Conditional)
-                updateUIState('generating_audio');
-                
-                if (state.useHDVoice) {
-                    await speakGemini(textResponse);
-                } else {
-                    speakNative(textResponse);
-                }
-
+                const response = await fetchGeminiResponse(text);
+                renderBotResponse(response);
             } catch (error) {
                 console.error(error);
-                let msg = error.message;
-                if(msg.includes("429") || msg.includes("Quota")) {
-                    msg = "Traffic limit. Please switch to Browser Voice in settings.";
-                    // Auto-disable HD to help user
-                    state.useHDVoice = false;
-                    hdVoiceToggle.checked = false;
-                    updateVoiceLabel(false);
-                    localStorage.setItem('tutor_use_hd', 'false');
-                }
-                addBotMessage(`Error: ${msg}`);
+                renderSystemMessage("Error conectando con el profesor. Verifica tu API Key o conexión.");
+            } finally {
                 updateUIState('idle');
             }
         }
 
-        async function fetchGeminiText(input) {
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${state.apiKey}`;
+        async function fetchGeminiResponse(userText) {
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${state.apiKey}`;
             
-            const contextPrompt = `
-                You are Professor Emma, an English Tutor.
-                Goal: Help Spanish speaker.
-                Rule: If user makes mistake: Quote mistake in <span class="error-mark">error</span>, correct in <span class="correction-mark">correction</span>.
-                Response: Concise (max 2 sentences). Natural English.
-                User: "${input}"
+            // Prompt Ingeniería para JSON Estructurado
+            const systemPrompt = `
+                You are Prof. Alex, a friendly and professional English tutor. 
+                Your goal is to converse with the user and CORRECT their grammar/vocabulary mistakes.
+                
+                INSTRUCTIONS:
+                1. Analyze the user's input for English errors.
+                2. If errors exist, construct a 'correction' object.
+                3. For the visual correction style: 
+                   - Wrap incorrect words in <span class="text-red-500 line-through decoration-2">...</span>
+                   - Wrap correct words in <span class="text-green-500 font-bold bg-green-50 px-1 rounded">...</span>
+                   - Reconstruct the sentence showing the errors crossed out and corrections next to them.
+                4. Always provide a natural, conversational 'response' to keep the chat going.
+                5. Respond ONLY in valid JSON format.
+
+                JSON SCHEMA:
+                {
+                    "correction": {
+                        "hasError": boolean,
+                        "htmlDisplay": "String with HTML spans for red/green styling" 
+                    },
+                    "response": "String (Conversational reply)"
+                }
+
+                Example of htmlDisplay: "My favorite <span class=\"text-red-500 line-through decoration-2\">gender</span> <span class=\"text-green-500 font-bold bg-green-50 px-1 rounded\">genre</span> of music is rock."
             `;
 
-            const payload = { contents: [{ parts: [{ text: contextPrompt }] }] };
+            const payload = {
+                contents: [{
+                    parts: [{ text: userText }]
+                }],
+                systemInstruction: {
+                    parts: [{ text: systemPrompt }]
+                },
+                generationConfig: {
+                    responseMimeType: "application/json"
+                }
+            };
 
             const response = await fetch(url, {
                 method: 'POST',
@@ -560,257 +398,88 @@
                 body: JSON.stringify(payload)
             });
 
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.error?.message || `API Error ${response.status}`);
-            }
-            
             const data = await response.json();
-            return data.candidates[0].content.parts[0].text;
-        }
-
-        // --- Translation ---
-        async function translateMessage(btn) {
-            if (!state.apiKey) return showNotification("No API Key", "error");
             
-            const messageDiv = btn.parentElement;
-            const textContainer = messageDiv.querySelector('.text-content');
-            let translationDiv = messageDiv.querySelector('.translation-result');
+            if (data.error) throw new Error(data.error.message);
             
-            if (translationDiv) {
-                translationDiv.style.display = translationDiv.style.display === 'none' ? 'block' : 'none';
-                return;
-            }
-
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-            btn.disabled = true;
-
-            try {
-                const content = textContainer.innerHTML.trim();
-                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${state.apiKey}`;
-                
-                const prompt = `Translate to Spanish. Preserve HTML <span class="error-mark"> and <span class="correction-mark">. Do NOT translate content inside spans. Input: "${content}"`;
-                
-                const response = await fetch(url, {
-                    method: 'POST', 
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
-                });
-
-                const data = await response.json();
-                let trans = data.candidates[0].content.parts[0].text.replace(/```html|```/g, '').trim();
-                
-                translationDiv = document.createElement('div');
-                translationDiv.className = 'translation-result text-[15px] text-indigo-600 mt-3 pt-2 border-t border-gray-100 font-medium';
-                translationDiv.innerHTML = trans;
-                messageDiv.insertBefore(translationDiv, btn);
-            } catch(e) {
-                console.error(e);
-            } finally {
-                btn.innerHTML = '<i class="fas fa-language"></i>';
-                btn.disabled = false;
-            }
+            const rawText = data.candidates[0].content.parts[0].text;
+            return JSON.parse(rawText);
         }
 
-        // --- Audio: HD Gemini ---
-        async function speakGemini(text) {
-            const cleanText = text.replace(/<[^>]*>/g, '');
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${state.apiKey}`;
+        // --- Text to Speech (TTS) ---
+        function speakText(text) {
+            if (!state.synthesis) return;
             
-            try {
-                const response = await fetch(url, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        contents: [{ parts: [{ text: cleanText }] }],
-                        generationConfig: {
-                            responseModalities: ["AUDIO"],
-                            speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: "Kore" } } }
-                        }
-                    })
-                });
+            // Cancelar habla anterior
+            state.synthesis.cancel();
 
-                if (!response.ok) throw new Error(`TTS Error ${response.status}`);
-
-                const data = await response.json();
-                if (data.candidates && data.candidates[0].content.parts[0].inlineData) {
-                    await playPCM16(data.candidates[0].content.parts[0].inlineData.data);
-                }
-            } catch (e) {
-                console.warn("TTS failed, fallback to native");
-                speakNative(cleanText); 
-            }
-        }
-
-        async function playPCM16(base64Data) {
-            updateUIState('speaking');
-            const binaryString = window.atob(base64Data);
-            const len = binaryString.length;
-            const bytes = new Uint8Array(len);
-            for (let i = 0; i < len; i++) { bytes[i] = binaryString.charCodeAt(i); }
-            
-            const wavBytes = getWavBytes(bytes.buffer, { isFloat: false, numChannels: 1, sampleRate: 24000 });
-            const blob = new Blob([wavBytes], { type: 'audio/wav' });
-            const audioUrl = URL.createObjectURL(blob);
-            const audio = new Audio(audioUrl);
-            audio.onended = () => { updateUIState('idle'); URL.revokeObjectURL(audioUrl); };
-            await audio.play();
-        }
-
-        function getWavBytes(buffer, options) {
-            const type = options.isFloat ? Float32Array : Uint16Array;
-            const numFrames = buffer.byteLength / type.BYTES_PER_ELEMENT;
-            const headerBytes = getWavHeader(Object.assign({}, options, { numFrames }));
-            const wavBytes = new Uint8Array(headerBytes.length + buffer.byteLength);
-            wavBytes.set(headerBytes, 0);
-            wavBytes.set(new Uint8Array(buffer), headerBytes.length);
-            return wavBytes;
-        }
-
-        function getWavHeader(options) {
-            const numFrames = options.numFrames;
-            const numChannels = options.numChannels || 2;
-            const sampleRate = options.sampleRate || 44100;
-            const bytesPerSample = options.isFloat ? 4 : 2;
-            const format = options.isFloat ? 3 : 1;
-            const blockAlign = numChannels * bytesPerSample;
-            const byteRate = sampleRate * blockAlign;
-            const dataSize = numFrames * blockAlign;
-            const buffer = new ArrayBuffer(44);
-            const dv = new DataView(buffer);
-            let p = 0;
-            function writeString(s) { for (let i = 0; i < s.length; i++) { dv.setUint8(p + i, s.charCodeAt(i)); } p += s.length; }
-            function writeUint32(d) { dv.setUint32(p, d, true); p += 4; }
-            function writeUint16(d) { dv.setUint16(p, d, true); p += 2; }
-            writeString('RIFF'); writeUint32(dataSize + 36); writeString('WAVE');
-            writeString('fmt '); writeUint32(16); writeUint16(format);
-            writeUint16(numChannels); writeUint32(sampleRate); writeUint32(byteRate);
-            writeUint16(blockAlign); writeUint16(bytesPerSample * 8);
-            writeString('data'); writeUint32(dataSize);
-            return new Uint8Array(buffer);
-        }
-
-        // --- Audio: Native Browser ---
-        function speakNative(text) {
-            updateUIState('speaking');
-            const cleanText = text.replace(/<[^>]*>/g, '');
-            const utterance = new SpeechSynthesisUtterance(cleanText);
+            const utterance = new SpeechSynthesisUtterance(text);
             utterance.lang = 'en-US';
-            utterance.onend = () => updateUIState('idle');
-            
-            // Try to find a good female voice if available
-            const voices = speechSynthesis.getVoices();
-            const preferred = voices.find(v => v.name.includes('Google US English')) || 
-                              voices.find(v => v.lang === 'en-US' && v.name.includes('Female')) ||
-                              voices.find(v => v.lang === 'en-US');
-                              
-            if(preferred) utterance.voice = preferred;
-            speechSynthesis.speak(utterance);
+            utterance.rate = 1;
+            utterance.pitch = 1;
+
+            // Intentar buscar una voz masculina de Google o Microsoft
+            const voices = state.synthesis.getVoices();
+            const maleVoice = voices.find(v => (v.name.includes('Male') || v.name.includes('Google US English')) && v.lang.startsWith('en'));
+            if (maleVoice) utterance.voice = maleVoice;
+
+            state.synthesis.speak(utterance);
         }
 
-        // --- UI Logic ---
-        function addUserMessage(text) {
-            const div = document.createElement('div');
-            div.className = 'message self-end w-[85%] max-w-xs bg-primary text-white rounded-2xl rounded-br-none p-4 shadow-md';
-            div.innerHTML = `<div class="text-[15px]">${text}</div>`;
-            chatMessages.appendChild(div);
+        // --- Utilidades ---
+        function renderSystemMessage(msg) {
+            const html = `<div class="text-center text-xs text-red-400 my-4">${msg}</div>`;
+            els.chatArea.insertAdjacentHTML('beforeend', html);
             scrollToBottom();
         }
 
-        function addBotMessage(html) {
-            const div = document.createElement('div');
-            div.className = 'message self-start w-[90%] max-w-sm bg-white border border-gray-100 rounded-2xl rounded-tl-none p-4 shadow-sm relative pb-8';
-            div.innerHTML = `
-                <div class="text-content text-gray-700 leading-relaxed text-[15px]">${html}</div>
-                <button onclick="translateMessage(this)" class="absolute bottom-2 right-2 text-indigo-500 hover:text-indigo-700 hover:scale-110 transition-all bg-indigo-50 p-1.5 rounded-full w-8 h-8 flex items-center justify-center shadow-sm" title="Translate">
-                    <i class="fas fa-language"></i>
-                </button>
-            `;
-            chatMessages.appendChild(div);
-            scrollToBottom();
+        function escapeHtml(text) {
+            return text.replace(/'/g, "\\'");
         }
+        
+        // Función global para el botón de traducir
+        window.translateText = (text) => {
+            const url = `https://translate.google.com/?sl=en&tl=es&text=${encodeURIComponent(text)}&op=translate`;
+            window.open(url, '_blank');
+        };
 
-        function updateUIState(status) {
-            voiceBtn.classList.remove('listening', 'speaking');
-            soundWave.style.display = 'none';
-            typingIndicator.classList.add('hidden');
-            
-            switch(status) {
-                case 'listening':
-                    voiceBtn.classList.add('listening');
-                    voiceBtn.innerHTML = '<i class="fas fa-paper-plane text-white text-2xl"></i>';
-                    voiceStatus.textContent = 'Tap to Send';
-                    soundWave.style.display = 'flex';
-                    break;
-                case 'thinking':
-                    voiceBtn.disabled = true;
-                    typingIndicator.classList.remove('hidden');
-                    statusText.textContent = 'Emma is thinking...';
-                    voiceStatus.textContent = 'Processing';
-                    break;
-                case 'generating_audio':
-                    voiceBtn.disabled = true;
-                    typingIndicator.classList.remove('hidden');
-                    statusText.textContent = 'Emma is replying...';
-                    break;
-                case 'speaking':
-                    voiceBtn.classList.add('speaking');
-                    voiceBtn.innerHTML = '<i class="fas fa-volume-up"></i>';
-                    voiceBtn.disabled = false;
-                    voiceStatus.textContent = 'Speaking...';
-                    soundWave.style.display = 'flex';
-                    break;
-                case 'idle':
-                default:
-                    voiceBtn.innerHTML = '<i class="fas fa-microphone"></i>';
-                    voiceBtn.disabled = false;
-                    voiceStatus.textContent = 'Tap to speak';
-                    break;
-            }
-        }
-
-        function scrollToBottom() {
-            chatMessages.scrollTop = chatMessages.scrollHeight;
-        }
-
-        function saveSettings() {
-            const key = apiKeyInput.value.trim();
-            const useHD = hdVoiceToggle.checked;
-            
-            if (key) {
-                state.apiKey = key;
-                localStorage.setItem('tutor_api_key', key);
-            }
-            state.useHDVoice = useHD;
-            localStorage.setItem('tutor_use_hd', useHD);
-            
-            updateVoiceLabel(useHD);
-            settingsModal.classList.add('hidden');
-            showNotification('Settings saved');
-        }
-
-        function showNotification(text, type = 'success') {
-            notificationText.textContent = text;
-            const container = notification.querySelector('div');
-            const icon = container.querySelector('i');
-            
-            if (type === 'error') {
-                container.className = 'w-6 h-6 rounded-full bg-red-100 flex items-center justify-center text-red-500';
-                icon.className = 'fas fa-exclamation text-xs';
+        // --- Event Listeners ---
+        els.micBtn.addEventListener('click', () => {
+            if (state.isListening) {
+                state.recognition.stop();
             } else {
-                container.className = 'w-6 h-6 rounded-full bg-green-100 flex items-center justify-center text-green-500';
-                icon.className = 'fas fa-check text-xs';
+                state.recognition.start();
             }
-            
-            notification.classList.remove('-translate-y-24', 'opacity-0');
-            notification.classList.add('translate-y-6');
-            setTimeout(() => {
-                notification.classList.add('-translate-y-24', 'opacity-0');
-                notification.classList.remove('translate-y-6');
-            }, 3000);
-        }
+        });
 
-        speechSynthesis.onvoiceschanged = () => {};
+        // Config Modal
+        els.settingsBtn.addEventListener('click', () => {
+            els.settingsModal.classList.remove('hidden');
+            els.settingsModal.classList.add('flex');
+        });
+
+        els.closeSettings.addEventListener('click', () => {
+            els.settingsModal.classList.add('hidden');
+            els.settingsModal.classList.remove('flex');
+        });
+
+        els.saveSettings.addEventListener('click', () => {
+            const key = els.apiKeyInput.value.trim();
+            if (key) {
+                localStorage.setItem('gemini_api_key', key);
+                state.apiKey = key;
+                els.settingsModal.classList.add('hidden');
+                els.settingsModal.classList.remove('flex');
+                alert("¡API Key guardada correctamente!");
+            }
+        });
+
+        // Inicializar
+        init();
+        
+        // Cargar voces (chrome a veces tarda)
+        window.speechSynthesis.onvoiceschanged = () => {};
+
     </script>
 </body>
 </html>
