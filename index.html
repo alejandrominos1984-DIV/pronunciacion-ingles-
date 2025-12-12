@@ -12,7 +12,7 @@
             --primary-dark: #3a56d4;
             --secondary: #7209b7;
             --accent: #f72585;
-            --success: #4cc9f0;
+            --success: #2ecc71;
             --error: #ff006e;
             --warning: #ff9e00;
             --dark: #212529;
@@ -54,7 +54,7 @@
         .header {
             background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
             color: white;
-            padding: 0.75rem 1rem;
+            padding: 0.8rem 1rem;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -62,6 +62,7 @@
             position: relative;
             z-index: 100;
             min-height: 60px;
+            flex-shrink: 0;
         }
         
         .header::after {
@@ -177,6 +178,7 @@
             gap: 0.8rem;
             background-color: transparent;
             -webkit-overflow-scrolling: touch;
+            padding-bottom: 100px; /* Espacio para el botón de micrófono */
         }
         
         /* Mensaje del bot optimizado */
@@ -333,7 +335,7 @@
         }
         
         .correction-text {
-            color: #2ecc71;
+            color: var(--success);
             font-size: 0.9rem;
             font-weight: 500;
             padding-left: 1.2rem;
@@ -397,13 +399,20 @@
             color: var(--secondary);
         }
         
-        /* Área de entrada optimizada para móviles */
+        /* Área de entrada optimizada para móviles - FIXED POSITION */
         .input-area {
-            padding: 1rem;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 1rem 1rem 1.5rem;
             background: white;
             border-top: 1px solid var(--light-gray);
-            box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.05);
-            z-index: 10;
+            box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
         
         .mic-container {
@@ -411,6 +420,7 @@
             flex-direction: column;
             align-items: center;
             gap: 0.6rem;
+            width: 100%;
         }
         
         .wave-container {
@@ -421,6 +431,7 @@
             height: 20px;
             opacity: 0;
             transition: opacity 0.3s ease;
+            margin-bottom: 0.3rem;
         }
         
         .wave-container.active {
@@ -453,16 +464,18 @@
             min-height: 1.2rem;
             font-weight: 500;
             padding: 0 0.5rem;
+            margin-bottom: 0.5rem;
         }
         
+        /* Botón de micrófono mejorado para móviles */
         .mic-btn {
             background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
             border: none;
-            width: 60px;
-            height: 60px;
+            width: 70px;
+            height: 70px;
             border-radius: var(--radius-full);
             color: white;
-            font-size: 1.3rem;
+            font-size: 1.4rem;
             cursor: pointer;
             box-shadow: var(--shadow-lg);
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -471,6 +484,7 @@
             justify-content: center;
             position: relative;
             touch-action: manipulation;
+            z-index: 1001;
         }
         
         .mic-btn::after {
@@ -499,7 +513,7 @@
                 box-shadow: 0 0 0 0 rgba(247, 37, 133, 0.7);
             }
             70% { 
-                box-shadow: 0 0 0 10px rgba(247, 37, 133, 0);
+                box-shadow: 0 0 0 12px rgba(247, 37, 133, 0);
             }
             100% { 
                 box-shadow: 0 0 0 0 rgba(247, 37, 133, 0);
@@ -507,7 +521,7 @@
         }
         
         .mic-btn.send-mode {
-            background: linear-gradient(135deg, var(--success) 0%, #2bc9ef 100%);
+            background: linear-gradient(135deg, var(--success) 0%, #27ae60 100%);
         }
         
         .mic-btn i {
@@ -526,7 +540,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            z-index: 1000;
+            z-index: 2000;
             opacity: 0;
             visibility: hidden;
             transition: all 0.3s ease;
@@ -704,7 +718,7 @@
             display: flex;
             align-items: center;
             gap: 0.6rem;
-            z-index: 500;
+            z-index: 1500;
             opacity: 0;
             visibility: hidden;
             transition: all 0.3s ease;
@@ -783,9 +797,13 @@
             }
             
             .mic-btn {
-                width: 56px;
-                height: 56px;
-                font-size: 1.2rem;
+                width: 65px;
+                height: 65px;
+                font-size: 1.3rem;
+            }
+            
+            .input-area {
+                padding: 0.8rem 1rem 1.2rem;
             }
             
             .modal {
@@ -794,7 +812,7 @@
         }
         
         /* Para dispositivos en orientación horizontal */
-        @media (max-height: 500px) {
+        @media (max-height: 600px) {
             .header {
                 min-height: 50px;
                 padding: 0.5rem 0.8rem;
@@ -806,13 +824,17 @@
             }
             
             .input-area {
-                padding: 0.6rem;
+                padding: 0.6rem 1rem 1rem;
             }
             
             .mic-btn {
-                width: 50px;
-                height: 50px;
-                font-size: 1.1rem;
+                width: 60px;
+                height: 60px;
+                font-size: 1.2rem;
+            }
+            
+            .chat-container {
+                padding-bottom: 80px;
             }
         }
         
@@ -833,6 +855,20 @@
         /* Mejorar rendimiento de animaciones */
         .bot-message, .user-message, .mic-btn, .settings-btn {
             will-change: transform, opacity;
+        }
+        
+        /* Para dispositivos con notch o safe areas */
+        @supports (padding: max(0px)) {
+            .input-area {
+                padding-left: max(1rem, env(safe-area-inset-left));
+                padding-right: max(1rem, env(safe-area-inset-right));
+                padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
+            }
+            
+            .header {
+                padding-left: max(1rem, env(safe-area-inset-left));
+                padding-right: max(1rem, env(safe-area-inset-right));
+            }
         }
     </style>
 </head>
@@ -885,7 +921,7 @@
         <span>Listening... Speak now</span>
     </div>
     
-    <!-- Área de entrada optimizada para móviles -->
+    <!-- Área de entrada optimizada para móviles - POSICIÓN FIJADA -->
     <div class="input-area">
         <div class="mic-container">
             <div class="wave-container" id="waveContainer">
@@ -928,8 +964,13 @@
                 </div>
                 <div class="form-group">
                     <label for="voiceSpeed">Voice Speed</label>
-                    <input type="range" id="voiceSpeed" min="0.5" max="1.5" step="0.1" value="1.0">
-                    <p class="api-info" id="voiceSpeedValue">Speed: Normal</p>
+                    <input type="range" id="voiceSpeed" min="0.8" max="1.3" step="0.1" value="1.0">
+                    <p class="api-info" id="voiceSpeedValue">Speed: Normal (1.0x)</p>
+                </div>
+                <div class="form-group">
+                    <label for="voicePitch">Voice Pitch</label>
+                    <input type="range" id="voicePitch" min="0.7" max="1.2" step="0.1" value="0.9">
+                    <p class="api-info" id="voicePitchValue">Pitch: Masculine (0.9)</p>
                 </div>
             </div>
             <div class="modal-footer">
@@ -955,6 +996,8 @@
         const userNameInput = document.getElementById('userName');
         const voiceSpeedInput = document.getElementById('voiceSpeed');
         const voiceSpeedValue = document.getElementById('voiceSpeedValue');
+        const voicePitchInput = document.getElementById('voicePitch');
+        const voicePitchValue = document.getElementById('voicePitchValue');
         
         // Application state
         let isRecording = false;
@@ -963,7 +1006,9 @@
         let apiKey = '';
         let userName = 'Alejandro';
         let voiceSpeed = 1.0;
+        let voicePitch = 0.9; // Pitch más bajo para voz masculina
         let messageCount = 0;
+        let currentVoice = null;
         
         // Check for Web Speech API support
         const isSpeechRecognitionSupported = 'webkitSpeechRecognition' in window || 'SpeechRecognition' in window;
@@ -1018,6 +1063,7 @@
             const savedApiKey = localStorage.getItem('geminiApiKey');
             const savedUserName = localStorage.getItem('userName');
             const savedVoiceSpeed = localStorage.getItem('voiceSpeed');
+            const savedVoicePitch = localStorage.getItem('voicePitch');
             
             if (savedApiKey) {
                 apiKeyInput.value = savedApiKey;
@@ -1034,6 +1080,62 @@
                 voiceSpeed = parseFloat(savedVoiceSpeed);
                 updateVoiceSpeedValue();
             }
+            
+            if (savedVoicePitch) {
+                voicePitchInput.value = savedVoicePitch;
+                voicePitch = parseFloat(savedVoicePitch);
+                updateVoicePitchValue();
+            }
+            
+            // Load available voices and select a male voice
+            loadVoices();
+        }
+        
+        // Load available voices and select a male voice
+        function loadVoices() {
+            if ('speechSynthesis' in window) {
+                // Get voices when they are loaded
+                const voices = speechSynthesis.getVoices();
+                if (voices.length > 0) {
+                    selectMaleVoice(voices);
+                } else {
+                    // If voices aren't loaded yet, wait for them
+                    speechSynthesis.onvoiceschanged = () => {
+                        const voices = speechSynthesis.getVoices();
+                        selectMaleVoice(voices);
+                    };
+                }
+            }
+        }
+        
+        // Select a male voice from available voices
+        function selectMaleVoice(voices) {
+            // Try to find a male voice
+            const maleVoices = voices.filter(voice => {
+                const voiceName = voice.name.toLowerCase();
+                return (
+                    voice.lang.startsWith('en-') && 
+                    (voiceName.includes('male') || 
+                     voiceName.includes('man') ||
+                     voiceName.includes('google uk english male') ||
+                     voiceName.includes('microsoft david') ||
+                     voiceName.includes('google us english male') ||
+                     voiceName.includes('english male') ||
+                     (voiceName.includes('english') && !voiceName.includes('female') && !voiceName.includes('woman')))
+                );
+            });
+            
+            // If we found male voices, use the first one
+            if (maleVoices.length > 0) {
+                currentVoice = maleVoices[0];
+                console.log('Selected voice:', currentVoice.name);
+            } else {
+                // Fallback to any English voice
+                const englishVoices = voices.filter(voice => voice.lang.startsWith('en-'));
+                if (englishVoices.length > 0) {
+                    currentVoice = englishVoices[0];
+                }
+            }
         }
         
         // Update voice speed display
@@ -1042,6 +1144,14 @@
             if (voiceSpeed < 0.9) speedText = 'Slow';
             if (voiceSpeed > 1.1) speedText = 'Fast';
             voiceSpeedValue.textContent = `Speed: ${speedText} (${voiceSpeed.toFixed(1)}x)`;
+        }
+        
+        // Update voice pitch display
+        function updateVoicePitchValue() {
+            let pitchText = 'Masculine';
+            if (voicePitch < 0.8) pitchText = 'Deep';
+            if (voicePitch > 1.0) pitchText = 'Higher';
+            voicePitchValue.textContent = `Pitch: ${pitchText} (${voicePitch.toFixed(1)})`;
         }
         
         // Start recording
@@ -1266,6 +1376,11 @@
                     pattern: /\bless better\b/i, 
                     error: "less better",
                     correction: "worse"
+                },
+                { 
+                    pattern: /\bi am thinking\b.*\bmaybe i will go\b/i, 
+                    error: "I am thinking maybe I will go",
+                    correction: "I think I might go"
                 }
             ];
             
@@ -1380,64 +1495,38 @@
             return `${randomEncouragement} Can you tell me more about your day or interests?`;
         }
         
-        // Improved text-to-speech function with male voice
+        // Improved text-to-speech function with male voice and natural flow
         function speakText(text) {
             if ('speechSynthesis' in window) {
                 // Cancel any ongoing speech
                 speechSynthesis.cancel();
                 
-                const utterance = new SpeechSynthesisUtterance(text);
-                utterance.lang = 'en-US';
-                utterance.rate = voiceSpeed;
-                utterance.pitch = 0.9; // Lower pitch for more masculine sound
-                utterance.volume = 1;
+                // Split text into sentences for more natural pacing
+                const sentences = text.match(/[^\.!\?]+[\.!\?]+/g) || [text];
                 
-                // Get available voices
-                const voices = speechSynthesis.getVoices();
-                
-                // Try to find a male voice
-                let maleVoice = voices.find(voice => 
-                    voice.lang.startsWith('en-') && 
-                    (voice.name.toLowerCase().includes('male') || 
-                     voice.name.toLowerCase().includes('man') ||
-                     voice.name.includes('Google UK English Male') ||
-                     voice.name.includes('Microsoft David'))
-                );
-                
-                // If no male voice found, try to find a deeper voice
-                if (!maleVoice) {
-                    maleVoice = voices.find(voice => 
-                        voice.lang.startsWith('en-') && 
-                        !voice.name.toLowerCase().includes('female') &&
-                        !voice.name.toLowerCase().includes('woman') &&
-                        !voice.name.toLowerCase().includes('susan') &&
-                        !voice.name.toLowerCase().includes('zira')
-                    );
-                }
-                
-                // If still no voice found, use the first English voice
-                if (!maleVoice) {
-                    maleVoice = voices.find(voice => voice.lang.startsWith('en-'));
-                }
-                
-                if (maleVoice) {
-                    utterance.voice = maleVoice;
-                }
-                
-                // Speak the text
-                speechSynthesis.speak(utterance);
-            }
-        }
-        
-        // Load voices when they become available
-        if ('speechSynthesis' in window) {
-            // Load voices immediately if already loaded
-            if (speechSynthesis.getVoices().length > 0) {
-                // Voices are already loaded
-            } else {
-                speechSynthesis.onvoiceschanged = function() {
-                    // Voices are now loaded
-                };
+                // Speak each sentence with a slight pause between them
+                sentences.forEach((sentence, index) => {
+                    setTimeout(() => {
+                        const utterance = new SpeechSynthesisUtterance(sentence.trim());
+                        utterance.lang = 'en-US';
+                        utterance.rate = voiceSpeed;
+                        utterance.pitch = voicePitch; // Use configurable pitch
+                        utterance.volume = 1;
+                        
+                        // Use the selected male voice if available
+                        if (currentVoice) {
+                            utterance.voice = currentVoice;
+                        }
+                        
+                        // Add natural pauses and emphasis
+                        utterance.onboundary = (event) => {
+                            // Add slight pauses at commas and other punctuation
+                        };
+                        
+                        // Speak the sentence
+                        speechSynthesis.speak(utterance);
+                    }, index * 300); // Small pause between sentences
+                });
             }
         }
         
@@ -1470,7 +1559,7 @@
             notification.className = 'temp-notification';
             notification.style.cssText = `
                 position: fixed;
-                bottom: 100px;
+                bottom: 120px;
                 left: 50%;
                 transform: translateX(-50%);
                 background: var(--primary);
@@ -1556,6 +1645,12 @@
             updateVoiceSpeedValue();
         });
         
+        // Voice pitch input
+        voicePitchInput.addEventListener('input', () => {
+            voicePitch = parseFloat(voicePitchInput.value);
+            updateVoicePitchValue();
+        });
+        
         // Settings modal
         settingsBtn.addEventListener('click', () => {
             modalOverlay.classList.add('active');
@@ -1569,13 +1664,16 @@
             apiKey = apiKeyInput.value.trim();
             userName = userNameInput.value.trim() || 'Alejandro';
             voiceSpeed = parseFloat(voiceSpeedInput.value);
+            voicePitch = parseFloat(voicePitchInput.value);
             
             // Save to localStorage
             localStorage.setItem('geminiApiKey', apiKey);
             localStorage.setItem('userName', userName);
             localStorage.setItem('voiceSpeed', voiceSpeed);
+            localStorage.setItem('voicePitch', voicePitch);
             
             updateVoiceSpeedValue();
+            updateVoicePitchValue();
             modalOverlay.classList.remove('active');
             
             // Show confirmation
@@ -1599,10 +1697,33 @@
         // Initialize the app
         function initApp() {
             initFromStorage();
+            
+            // Ajustar el padding del chat container para que no quede oculto detrás del botón
+            adjustChatContainerPadding();
+            
+            // Asegurarse de que el botón de micrófono sea visible
+            ensureMicButtonVisibility();
+        }
+        
+        // Adjust chat container padding based on button position
+        function adjustChatContainerPadding() {
+            const inputArea = document.querySelector('.input-area');
+            const inputAreaHeight = inputArea.offsetHeight;
+            chatContainer.style.paddingBottom = `${inputAreaHeight + 20}px`;
+        }
+        
+        // Ensure mic button is visible
+        function ensureMicButtonVisibility() {
+            const micBtn = document.getElementById('micBtn');
+            micBtn.style.visibility = 'visible';
+            micBtn.style.opacity = '1';
         }
         
         // Initialize the app when page loads
         window.addEventListener('DOMContentLoaded', initApp);
+        
+        // Adjust padding on window resize
+        window.addEventListener('resize', adjustChatContainerPadding);
         
         // Prevent context menu on long press for mobile
         document.addEventListener('contextmenu', (e) => {
