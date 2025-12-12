@@ -3,1577 +3,717 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Prof. Sterling | AI English Tutor</title>
+    <title>Prof. Sterling | Pro English Tutor</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
         :root {
-            --primary: #4361ee;
-            --primary-dark: #3a56d4;
-            --secondary: #7209b7;
-            --accent: #f72585;
-            --success: #2ecc71;
-            --error: #ff006e;
-            --warning: #ff9e00;
-            --dark: #212529;
-            --light: #f8f9fa;
-            --gray: #6c757d;
-            --light-gray: #e9ecef;
-            --user-bubble: #4361ee;
-            --bot-bubble: #f1f3f9;
-            --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.08);
-            --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.12);
-            --shadow-lg: 0 8px 28px rgba(0, 0, 0, 0.15);
-            --radius-sm: 8px;
-            --radius-md: 12px;
-            --radius-lg: 16px;
-            --radius-xl: 24px;
-            --radius-full: 9999px;
+            --bg-color: #0f172a;
+            --chat-bg: #1e293b;
+            --primary: #3b82f6;
+            --primary-glow: rgba(59, 130, 246, 0.5);
+            --secondary: #64748b;
+            --accent: #0ea5e9;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --success: #10b981;
+            --error: #ef4444;
+            --user-msg-bg: #2563eb;
+            --bot-msg-bg: #334155;
+            
+            --radius-md: 16px;
+            --radius-lg: 24px;
+            --shadow-glow: 0 0 20px rgba(59, 130, 246, 0.15);
         }
-        
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            -webkit-tap-highlight-color: transparent;
-        }
-        
+
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
         body {
-            font-family: 'Inter', sans-serif;
-            background: linear-gradient(135deg, #f5f7ff 0%, #f0f2ff 100%);
-            color: var(--dark);
-            line-height: 1.5;
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
             height: 100vh;
             display: flex;
             flex-direction: column;
             overflow: hidden;
-            touch-action: manipulation;
         }
-        
-        /* Header optimizado para móviles */
+
+        /* --- Header --- */
         .header {
-            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
-            color: white;
-            padding: 0.8rem 1rem;
+            background: rgba(30, 41, 59, 0.8);
+            backdrop-filter: blur(10px);
+            padding: 1rem 1.5rem;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            box-shadow: var(--shadow-md);
-            position: relative;
-            z-index: 100;
-            min-height: 60px;
-            flex-shrink: 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            z-index: 10;
         }
-        
-        .header::after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            height: 3px;
-            background: linear-gradient(90deg, var(--accent), var(--success));
-        }
-        
-        .profile-section {
+
+        .profile-group {
             display: flex;
             align-items: center;
-            gap: 0.75rem;
-            flex: 1;
-            min-width: 0;
+            gap: 1rem;
         }
-        
-        .avatar-container {
+
+        .avatar-wrapper {
             position: relative;
-            flex-shrink: 0;
         }
-        
-        .profile-avatar {
-            width: 44px;
-            height: 44px;
-            border-radius: var(--radius-full);
+
+        .avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
             object-fit: cover;
-            border: 2px solid rgba(255, 255, 255, 0.3);
-            box-shadow: var(--shadow-sm);
+            border: 2px solid var(--primary);
+            box-shadow: 0 0 15px var(--primary-glow);
         }
-        
-        .online-status {
+
+        .status-dot {
             position: absolute;
-            bottom: 0;
-            right: 0;
-            width: 10px;
-            height: 10px;
-            background-color: var(--success);
-            border: 2px solid white;
-            border-radius: var(--radius-full);
+            bottom: 2px;
+            right: 2px;
+            width: 12px;
+            height: 12px;
+            background: var(--success);
+            border: 2px solid var(--bg-color);
+            border-radius: 50%;
         }
-        
-        .profile-info {
-            min-width: 0;
+
+        .tutor-info h1 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            letter-spacing: 0.5px;
         }
-        
-        .profile-info h1 {
-            font-size: 1rem;
-            font-weight: 700;
-            margin-bottom: 0.1rem;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-        
-        .profile-info p {
-            font-size: 0.75rem;
-            opacity: 0.9;
-            font-weight: 500;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-        
-        .badge {
-            display: inline-flex;
+
+        .tutor-info p {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            display: flex;
             align-items: center;
-            background: rgba(255, 255, 255, 0.2);
-            padding: 0.2rem 0.5rem;
-            border-radius: var(--radius-full);
-            font-size: 0.7rem;
-            margin-top: 0.1rem;
-            white-space: nowrap;
+            gap: 0.4rem;
         }
-        
-        .badge i {
-            margin-right: 0.2rem;
-            font-size: 0.6rem;
-        }
-        
+
         .settings-btn {
-            background: rgba(255, 255, 255, 0.15);
-            border: none;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: var(--text-main);
             width: 40px;
             height: 40px;
-            border-radius: var(--radius-full);
-            color: white;
-            font-size: 1rem;
+            border-radius: 12px;
             cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all 0.2s;
             display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow: var(--shadow-sm);
-            flex-shrink: 0;
         }
-        
-        .settings-btn:hover {
-            background: rgba(255, 255, 255, 0.25);
-            transform: rotate(90deg);
-        }
-        
-        /* Contenedor del chat optimizado para móviles */
-        .chat-container {
+
+        .settings-btn:hover { background: rgba(255,255,255,0.1); transform: rotate(45deg); }
+
+        /* --- Chat Area --- */
+        .chat-area {
             flex: 1;
             overflow-y: auto;
-            padding: 1rem;
+            padding: 1.5rem;
             display: flex;
             flex-direction: column;
-            gap: 0.8rem;
-            background-color: transparent;
-            -webkit-overflow-scrolling: touch;
-            padding-bottom: 100px; /* Espacio para el botón de micrófono */
+            gap: 1.5rem;
+            scroll-behavior: smooth;
+            padding-bottom: 180px; /* Space for input area */
         }
-        
-        /* Mensaje del bot optimizado */
-        .bot-message {
-            align-self: flex-start;
-            max-width: 90%;
-            width: fit-content;
-            animation: messageAppear 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-        
-        .bot-message-wrapper {
+
+        /* Message Bubbles */
+        .message {
             display: flex;
-            gap: 0.6rem;
-            align-items: flex-start;
+            gap: 1rem;
+            max-width: 95%;
+            animation: slideIn 0.3s ease-out;
         }
-        
-        .bot-avatar {
-            width: 32px;
-            height: 32px;
-            border-radius: var(--radius-full);
-            object-fit: cover;
-            flex-shrink: 0;
-            box-shadow: var(--shadow-sm);
-        }
-        
-        .bot-message-content {
-            background-color: var(--bot-bubble);
-            padding: 0.8rem;
-            border-radius: 0 var(--radius-md) var(--radius-md) var(--radius-md);
-            box-shadow: var(--shadow-sm);
-            position: relative;
-            flex-grow: 1;
-            min-width: 0;
-        }
-        
-        .bot-message-content::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -6px;
-            width: 0;
-            height: 0;
-            border-style: solid;
-            border-width: 0 6px 6px 0;
-            border-color: transparent var(--bot-bubble) transparent transparent;
-        }
-        
-        .bot-name {
-            font-weight: 700;
-            font-size: 0.8rem;
-            color: var(--secondary);
-            margin-bottom: 0.2rem;
-        }
-        
-        .bot-text {
-            font-size: 0.95rem;
-            line-height: 1.4;
-            color: var(--dark);
-            word-wrap: break-word;
-            overflow-wrap: break-word;
-        }
-        
-        /* Mensaje del usuario optimizado */
-        .user-message {
+
+        .message.user {
             align-self: flex-end;
-            max-width: 90%;
-            width: fit-content;
-            animation: messageAppear 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-        
-        .user-message-wrapper {
-            display: flex;
-            gap: 0.6rem;
-            align-items: flex-start;
             flex-direction: row-reverse;
         }
-        
-        .user-avatar {
-            width: 32px;
-            height: 32px;
-            border-radius: var(--radius-full);
+
+        .message.bot {
+            align-self: flex-start;
+        }
+
+        .msg-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
             object-fit: cover;
             flex-shrink: 0;
-            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            margin-top: 5px;
+        }
+
+        .msg-content {
             display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-weight: 600;
-            box-shadow: var(--shadow-sm);
+            flex-direction: column;
+            gap: 0.5rem;
+            min-width: 0; /* Fix flex overflow */
         }
-        
-        .user-message-content {
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-            color: white;
-            padding: 0.8rem;
-            border-radius: var(--radius-md) 0 var(--radius-md) var(--radius-md);
-            box-shadow: var(--shadow-sm);
-            position: relative;
-            flex-grow: 1;
-            min-width: 0;
-        }
-        
-        .user-message-content::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            right: -6px;
-            width: 0;
-            height: 0;
-            border-style: solid;
-            border-width: 0 0 6px 6px;
-            border-color: transparent transparent transparent var(--primary-dark);
-        }
-        
-        .user-text {
+
+        .msg-bubble {
+            padding: 1rem 1.2rem;
+            border-radius: var(--radius-md);
             font-size: 0.95rem;
-            line-height: 1.4;
-            word-wrap: break-word;
-            overflow-wrap: break-word;
+            line-height: 1.6;
+            position: relative;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
-        
-        /* Corrección de errores optimizada para móviles */
-        .correction-container {
-            background: linear-gradient(135deg, #fff5f7 0%, #ffeef2 100%);
-            border-left: 3px solid var(--error);
-            padding: 0.6rem 0.8rem;
-            border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
-            margin-bottom: 0.6rem;
-            box-shadow: var(--shadow-sm);
+
+        .user .msg-bubble {
+            background: var(--user-msg-bg);
+            color: white;
+            border-radius: var(--radius-lg) var(--radius-lg) 0 var(--radius-lg);
         }
-        
-        .correction-title {
-            display: flex;
-            align-items: center;
-            gap: 0.4rem;
-            font-size: 0.75rem;
-            font-weight: 600;
-            color: var(--error);
-            margin-bottom: 0.3rem;
+
+        .bot .msg-bubble {
+            background: var(--bot-msg-bg);
+            color: var(--text-main);
+            border-radius: 0 var(--radius-lg) var(--radius-lg) var(--radius-lg);
         }
-        
-        .correction-title i {
-            font-size: 0.8rem;
-        }
-        
-        .error-text {
-            color: var(--error);
-            font-size: 0.85rem;
-            text-decoration: line-through;
-            margin-bottom: 0.2rem;
-            padding-left: 1.2rem;
-            word-break: break-word;
-        }
-        
-        .correction-text {
-            color: var(--success);
+
+        /* Corrections Section */
+        .correction-box {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            border-radius: 12px;
+            padding: 0.8rem 1rem;
+            margin-bottom: 0.5rem;
             font-size: 0.9rem;
-            font-weight: 500;
-            padding-left: 1.2rem;
-            word-break: break-word;
+            backdrop-filter: blur(5px);
         }
-        
-        /* Recomendación natural optimizada */
-        .recommendation-container {
-            background: linear-gradient(135deg, #f0f9ff 0%, #e6f7ff 100%);
-            border-left: 3px solid var(--success);
-            padding: 0.6rem 0.8rem;
-            border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
-            margin-top: 0.6rem;
-            box-shadow: var(--shadow-sm);
-        }
-        
-        .recommendation-title {
+
+        .correction-header {
             display: flex;
             align-items: center;
-            gap: 0.4rem;
-            font-size: 0.75rem;
+            gap: 0.5rem;
+            color: var(--error);
             font-weight: 600;
-            color: var(--success);
+            font-size: 0.8rem;
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .diff-error {
+            color: #fca5a5;
+            text-decoration: line-through;
+            opacity: 0.8;
+            display: block;
             margin-bottom: 0.3rem;
         }
+
+        .diff-correct {
+            color: var(--success);
+            font-weight: 500;
+            display: block;
+        }
         
-        .recommendation-title i {
+        .diff-explanation {
+            margin-top: 0.5rem;
             font-size: 0.8rem;
+            color: var(--text-muted);
+            border-top: 1px solid rgba(255,255,255,0.1);
+            padding-top: 0.4rem;
         }
-        
-        .recommendation-text {
-            color: var(--dark);
-            font-size: 0.85rem;
-            font-style: italic;
-            padding-left: 1.2rem;
-            word-break: break-word;
-        }
-        
-        /* Botón de traducción optimizado */
-        .translation-btn {
-            background: white;
-            border: none;
-            width: 28px;
-            height: 28px;
-            border-radius: var(--radius-full);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: var(--primary);
-            box-shadow: var(--shadow-sm);
-            cursor: pointer;
-            font-size: 0.8rem;
-            transition: all 0.3s ease;
-            margin-top: 0.4rem;
-            margin-left: 38px;
-        }
-        
-        .translation-btn:hover {
-            transform: scale(1.1);
-            box-shadow: var(--shadow-md);
-            color: var(--secondary);
-        }
-        
-        /* Área de entrada optimizada para móviles - FIXED POSITION */
-        .input-area {
+
+        /* --- Input Area --- */
+        .input-container {
             position: fixed;
             bottom: 0;
             left: 0;
             right: 0;
-            padding: 1rem 1rem 1.5rem;
-            background: white;
-            border-top: 1px solid var(--light-gray);
-            box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.1);
-            z-index: 1000;
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(15px);
+            padding: 1.5rem;
+            border-top: 1px solid rgba(255,255,255,0.1);
             display: flex;
             flex-direction: column;
             align-items: center;
+            gap: 1rem;
+            z-index: 20;
         }
-        
-        .mic-container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 0.6rem;
-            width: 100%;
-        }
-        
-        .wave-container {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 3px;
-            height: 20px;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-            margin-bottom: 0.3rem;
-        }
-        
-        .wave-container.active {
-            opacity: 1;
-        }
-        
-        .wave-bar {
-            width: 2.5px;
-            height: 16px;
-            background: linear-gradient(to top, var(--primary), var(--secondary));
-            border-radius: 1.5px;
-            animation: wave 1s ease-in-out infinite;
-        }
-        
-        .wave-bar:nth-child(1) { animation-delay: 0s; }
-        .wave-bar:nth-child(2) { animation-delay: 0.1s; }
-        .wave-bar:nth-child(3) { animation-delay: 0.2s; }
-        .wave-bar:nth-child(4) { animation-delay: 0.3s; }
-        .wave-bar:nth-child(5) { animation-delay: 0.4s; }
-        
-        @keyframes wave {
-            0%, 100% { transform: scaleY(0.3); }
-            50% { transform: scaleY(1); }
-        }
-        
-        .status-indicator {
-            text-align: center;
-            font-size: 0.85rem;
-            color: var(--gray);
-            min-height: 1.2rem;
-            font-weight: 500;
-            padding: 0 0.5rem;
-            margin-bottom: 0.5rem;
-        }
-        
-        /* Botón de micrófono mejorado para móviles */
-        .mic-btn {
-            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+
+        .mic-button {
+            width: 72px;
+            height: 72px;
+            border-radius: 50%;
             border: none;
-            width: 70px;
-            height: 70px;
-            border-radius: var(--radius-full);
+            background: linear-gradient(135deg, var(--primary), var(--accent));
             color: white;
-            font-size: 1.4rem;
+            font-size: 1.5rem;
             cursor: pointer;
-            box-shadow: var(--shadow-lg);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 0 20px var(--primary-glow);
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             display: flex;
             align-items: center;
             justify-content: center;
             position: relative;
-            touch-action: manipulation;
-            z-index: 1001;
         }
-        
-        .mic-btn::after {
-            content: '';
-            position: absolute;
-            top: -5px;
-            left: -5px;
-            right: -5px;
-            bottom: -5px;
-            border-radius: var(--radius-full);
-            border: 2px solid rgba(67, 97, 238, 0.2);
-            pointer-events: none;
-        }
-        
-        .mic-btn:active {
-            transform: scale(0.95);
-        }
-        
-        .mic-btn.recording {
-            background: linear-gradient(135deg, var(--accent) 0%, #ff2d95 100%);
+
+        .mic-button:active { transform: scale(0.95); }
+        .mic-button.listening { 
+            background: var(--error); 
+            box-shadow: 0 0 30px rgba(239, 68, 68, 0.4);
             animation: pulse 1.5s infinite;
         }
-        
-        @keyframes pulse {
-            0% { 
-                box-shadow: 0 0 0 0 rgba(247, 37, 133, 0.7);
-            }
-            70% { 
-                box-shadow: 0 0 0 12px rgba(247, 37, 133, 0);
-            }
-            100% { 
-                box-shadow: 0 0 0 0 rgba(247, 37, 133, 0);
-            }
+
+        .status-text {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            font-weight: 500;
+            min-height: 20px;
         }
-        
-        .mic-btn.send-mode {
-            background: linear-gradient(135deg, var(--success) 0%, #27ae60 100%);
-        }
-        
-        .mic-btn i {
-            transition: transform 0.3s ease;
-        }
-        
-        /* Modal de configuración optimizado para móviles */
-        .modal-overlay {
+
+        /* --- Modal --- */
+        .modal-backdrop {
             position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: rgba(0, 0, 0, 0.7);
-            backdrop-filter: blur(4px);
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(5px);
             display: flex;
             align-items: center;
             justify-content: center;
-            z-index: 2000;
             opacity: 0;
-            visibility: hidden;
-            transition: all 0.3s ease;
-            padding: 1rem;
+            pointer-events: none;
+            transition: opacity 0.3s;
+            z-index: 100;
         }
-        
-        .modal-overlay.active {
-            opacity: 1;
-            visibility: visible;
+        .modal-backdrop.active { opacity: 1; pointer-events: all; }
+
+        .modal-content {
+            background: var(--chat-bg);
+            width: 90%;
+            max-width: 450px;
+            border-radius: 20px;
+            padding: 2rem;
+            border: 1px solid rgba(255,255,255,0.1);
+            transform: translateY(20px);
+            transition: transform 0.3s;
         }
-        
-        .modal {
-            background-color: white;
-            width: 100%;
-            max-width: 400px;
-            border-radius: var(--radius-lg);
-            box-shadow: var(--shadow-lg);
-            overflow: hidden;
-            transform: translateY(30px) scale(0.95);
-            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            max-height: 90vh;
-            overflow-y: auto;
-        }
-        
-        .modal-overlay.active .modal {
-            transform: translateY(0) scale(1);
-        }
-        
-        .modal-header {
-            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
-            color: white;
-            padding: 1.2rem;
-            text-align: center;
-        }
-        
-        .modal-header h2 {
-            font-size: 1.3rem;
-            font-weight: 700;
-            margin-bottom: 0.3rem;
-        }
-        
-        .modal-header p {
-            opacity: 0.9;
-            font-size: 0.85rem;
-        }
-        
-        .modal-body {
-            padding: 1.2rem;
-        }
-        
-        .form-group {
-            margin-bottom: 1.2rem;
-        }
-        
-        .form-group label {
-            display: block;
-            margin-bottom: 0.4rem;
-            font-weight: 600;
-            color: var(--dark);
-            font-size: 0.9rem;
-        }
-        
-        .form-group input {
+        .modal-backdrop.active .modal-content { transform: translateY(0); }
+
+        .form-label { display: block; margin-bottom: 0.5rem; color: var(--text-muted); font-size: 0.9rem; }
+        .form-input, .form-select {
             width: 100%;
             padding: 0.8rem;
-            border: 1px solid var(--light-gray);
-            border-radius: var(--radius-md);
-            font-family: 'Inter', sans-serif;
-            font-size: 0.95rem;
-            transition: all 0.3s ease;
-            background-color: #fafbff;
+            background: rgba(0,0,0,0.2);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 10px;
+            color: white;
+            font-family: inherit;
+            margin-bottom: 1.5rem;
         }
-        
-        .form-group input:focus {
-            outline: none;
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1);
-        }
-        
-        .api-info {
-            font-size: 0.8rem;
-            color: var(--gray);
-            margin-top: 0.4rem;
-            line-height: 1.4;
-        }
-        
-        .api-info a {
-            color: var(--primary);
-            text-decoration: none;
-            font-weight: 600;
-        }
-        
-        .api-info a:hover {
-            text-decoration: underline;
-        }
-        
-        .modal-footer {
-            padding: 1rem 1.2rem;
-            background-color: #f8f9ff;
-            display: flex;
-            justify-content: flex-end;
-            gap: 0.8rem;
-            border-top: 1px solid var(--light-gray);
-        }
-        
-        .btn {
-            padding: 0.7rem 1.5rem;
-            border-radius: var(--radius-md);
-            font-family: 'Inter', sans-serif;
+        .form-select option { background: var(--chat-bg); }
+
+        .save-btn {
+            width: 100%;
+            padding: 1rem;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 12px;
             font-weight: 600;
             cursor: pointer;
-            border: none;
-            transition: all 0.3s ease;
-            font-size: 0.9rem;
         }
+
+        @keyframes slideIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); } 70% { box-shadow: 0 0 0 15px rgba(239, 68, 68, 0); } 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); } }
         
-        .btn-primary {
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-            color: white;
-            box-shadow: var(--shadow-sm);
-        }
-        
-        .btn-primary:active {
-            transform: translateY(-1px);
-            box-shadow: var(--shadow-md);
-        }
-        
-        .btn-secondary {
-            background-color: white;
-            color: var(--gray);
-            border: 1px solid var(--light-gray);
-        }
-        
-        .btn-secondary:active {
-            background-color: var(--light-gray);
-        }
-        
-        /* Animaciones */
-        @keyframes messageAppear {
-            from { 
-                opacity: 0; 
-                transform: translateY(10px) scale(0.95); 
-            }
-            to { 
-                opacity: 1; 
-                transform: translateY(0) scale(1); 
-            }
-        }
-        
-        /* Scrollbar personalizada para móviles */
-        .chat-container::-webkit-scrollbar {
-            width: 4px;
-        }
-        
-        .chat-container::-webkit-scrollbar-track {
-            background: rgba(0, 0, 0, 0.05);
-            border-radius: 10px;
-        }
-        
-        .chat-container::-webkit-scrollbar-thumb {
-            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
-            border-radius: 10px;
-        }
-        
-        /* Indicador de grabación optimizado */
-        .recording-indicator {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(0, 0, 0, 0.8);
-            color: white;
-            padding: 0.8rem 1.2rem;
-            border-radius: var(--radius-lg);
-            display: flex;
-            align-items: center;
-            gap: 0.6rem;
-            z-index: 1500;
-            opacity: 0;
-            visibility: hidden;
-            transition: all 0.3s ease;
-            box-shadow: var(--shadow-lg);
-            font-size: 0.9rem;
-        }
-        
-        .recording-indicator.active {
-            opacity: 1;
-            visibility: visible;
-        }
-        
-        .recording-dot {
-            width: 10px;
-            height: 10px;
-            background-color: var(--accent);
-            border-radius: var(--radius-full);
-            animation: recordingBlink 1.5s infinite;
-        }
-        
-        @keyframes recordingBlink {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.3; }
-        }
-        
-        /* Mejora para dispositivos muy pequeños */
-        @media (max-width: 350px) {
-            .header {
-                padding: 0.6rem 0.8rem;
-            }
-            
-            .profile-avatar {
-                width: 40px;
-                height: 40px;
-            }
-            
-            .profile-info h1 {
-                font-size: 0.9rem;
-            }
-            
-            .profile-info p {
-                font-size: 0.7rem;
-            }
-            
-            .badge {
-                font-size: 0.65rem;
-                padding: 0.15rem 0.4rem;
-            }
-            
-            .settings-btn {
-                width: 36px;
-                height: 36px;
-                font-size: 0.9rem;
-            }
-            
-            .chat-container {
-                padding: 0.8rem;
-                gap: 0.6rem;
-            }
-            
-            .bot-message, .user-message {
-                max-width: 95%;
-            }
-            
-            .bot-avatar, .user-avatar {
-                width: 28px;
-                height: 28px;
-            }
-            
-            .bot-message-content, .user-message-content {
-                padding: 0.6rem;
-            }
-            
-            .bot-text, .user-text {
-                font-size: 0.9rem;
-            }
-            
-            .mic-btn {
-                width: 65px;
-                height: 65px;
-                font-size: 1.3rem;
-            }
-            
-            .input-area {
-                padding: 0.8rem 1rem 1.2rem;
-            }
-            
-            .modal {
-                max-height: 85vh;
-            }
-        }
-        
-        /* Para dispositivos en orientación horizontal */
-        @media (max-height: 600px) {
-            .header {
-                min-height: 50px;
-                padding: 0.5rem 0.8rem;
-            }
-            
-            .profile-avatar {
-                width: 36px;
-                height: 36px;
-            }
-            
-            .input-area {
-                padding: 0.6rem 1rem 1rem;
-            }
-            
-            .mic-btn {
-                width: 60px;
-                height: 60px;
-                font-size: 1.2rem;
-            }
-            
-            .chat-container {
-                padding-bottom: 80px;
-            }
-        }
-        
-        /* Soporte para navegadores que no soportan backdrop-filter */
-        @supports not (backdrop-filter: blur(4px)) {
-            .modal-overlay {
-                background-color: rgba(0, 0, 0, 0.85);
-            }
-        }
-        
-        /* Prevenir zoom en inputs en iOS */
-        @media screen and (max-width: 768px) {
-            input, select, textarea {
-                font-size: 16px !important;
-            }
-        }
-        
-        /* Mejorar rendimiento de animaciones */
-        .bot-message, .user-message, .mic-btn, .settings-btn {
-            will-change: transform, opacity;
-        }
-        
-        /* Para dispositivos con notch o safe areas */
-        @supports (padding: max(0px)) {
-            .input-area {
-                padding-left: max(1rem, env(safe-area-inset-left));
-                padding-right: max(1rem, env(safe-area-inset-right));
-                padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
-            }
-            
-            .header {
-                padding-left: max(1rem, env(safe-area-inset-left));
-                padding-right: max(1rem, env(safe-area-inset-right));
-            }
+        /* Mobile fixes */
+        @media (max-width: 400px) {
+            .chat-area { padding: 1rem; }
+            .msg-bubble { padding: 0.8rem 1rem; font-size: 0.9rem; }
         }
     </style>
 </head>
 <body>
-    <!-- Header optimizado para móviles -->
+
     <header class="header">
-        <div class="profile-section">
-            <div class="avatar-container">
-                <img src="https://images.unsplash.com/photo-1568602471122-7832951cc4c5?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80" alt="Prof. Sterling" class="profile-avatar">
-                <div class="online-status"></div>
+        <div class="profile-group">
+            <div class="avatar-wrapper">
+                <img src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?ixlib=rb-4.0.3&auto=format&fit=crop&w=200&q=80" alt="Tutor" class="avatar">
+                <div class="status-dot"></div>
             </div>
-            <div class="profile-info">
+            <div class="tutor-info">
                 <h1>Prof. Sterling</h1>
-                <p>AI English Tutor</p>
-                <div class="badge">
-                    <i class="fas fa-volume-up"></i>
-                    <span>Voice Assistant</span>
-                </div>
+                <p><i class="fas fa-graduation-cap"></i> AI English Tutor</p>
             </div>
         </div>
-        <button class="settings-btn" id="settingsBtn">
-            <i class="fas fa-cog"></i>
-        </button>
+        <button class="settings-btn" id="settingsBtn"><i class="fas fa-sliders-h"></i></button>
     </header>
-    
-    <!-- Contenedor del chat -->
-    <div class="chat-container" id="chatContainer">
-        <!-- Solo un mensaje inicial del bot (sin repetición) -->
-        <div class="bot-message">
-            <div class="bot-message-wrapper">
-                <img src="https://images.unsplash.com/photo-1568602471122-7832951cc4c5?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80" alt="Prof. Sterling" class="bot-avatar">
-                <div class="bot-message-content">
-                    <div class="bot-name">Prof. Sterling</div>
-                    <div class="bot-text">
-                        Hello! I'm Professor Sterling, your AI English tutor. I'm here to help you practice English conversation. 
-                        I'll listen to you speak, provide corrections when needed, and give you tips for more natural expressions. 
-                        Press and hold the microphone button to start speaking, then release to send your message.
-                    </div>
+
+    <div class="chat-area" id="chatArea">
+        <!-- Messages will appear here -->
+        <div class="message bot">
+            <img src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?ixlib=rb-4.0.3&auto=format&fit=crop&w=200&q=80" class="msg-avatar">
+            <div class="msg-content">
+                <div class="msg-bubble">
+                    Hello there! I'm Sterling. I'm here to have a conversation with you and help you perfect your English.
+                    <br><br>
+                    I will detecting your mistakes, correcting them, and explaining why. What would you like to talk about today?
                 </div>
             </div>
-            <button class="translation-btn" title="Translate to Spanish">
-                <i class="fas fa-language"></i>
-            </button>
         </div>
     </div>
-    
-    <!-- Indicador de grabación -->
-    <div class="recording-indicator" id="recordingIndicator">
-        <div class="recording-dot"></div>
-        <span>Listening... Speak now</span>
+
+    <div class="input-container">
+        <div class="status-text" id="statusText">Press and hold to speak</div>
+        <button class="mic-button" id="micBtn">
+            <i class="fas fa-microphone"></i>
+        </button>
     </div>
-    
-    <!-- Área de entrada optimizada para móviles - POSICIÓN FIJADA -->
-    <div class="input-area">
-        <div class="mic-container">
-            <div class="wave-container" id="waveContainer">
-                <div class="wave-bar"></div>
-                <div class="wave-bar"></div>
-                <div class="wave-bar"></div>
-                <div class="wave-bar"></div>
-                <div class="wave-bar"></div>
-            </div>
+
+    <!-- Settings Modal -->
+    <div class="modal-backdrop" id="modalBackdrop">
+        <div class="modal-content">
+            <h2 style="margin-bottom: 1.5rem;">Settings</h2>
             
-            <div class="status-indicator" id="statusIndicator">
-                Press and hold to speak
-            </div>
-            
-            <button class="mic-btn" id="micBtn">
-                <i class="fas fa-microphone"></i>
-            </button>
+            <label class="form-label">Gemini API Key (Required for AI)</label>
+            <input type="password" class="form-input" id="apiKeyInput" placeholder="Enter your key...">
+
+            <label class="form-label">Voice Selection</label>
+            <select class="form-select" id="voiceSelect">
+                <option value="auto">Auto-Detect Male Voice</option>
+            </select>
+
+            <label class="form-label">Speaking Rate</label>
+            <input type="range" class="form-input" id="rateInput" min="0.5" max="1.5" step="0.1" value="1.0">
+
+            <button class="save-btn" id="saveBtn">Save Changes</button>
+            <p style="margin-top: 1rem; font-size: 0.8rem; color: var(--text-muted); text-align: center;" id="modalClose">Close</p>
         </div>
     </div>
-    
-    <!-- Modal de configuración optimizado para móviles -->
-    <div class="modal-overlay" id="modalOverlay">
-        <div class="modal">
-            <div class="modal-header">
-                <h2>API Configuration</h2>
-                <p>Set up your Gemini API key to enable AI features</p>
-            </div>
-            <div class="modal-body">
-                <div class="form-group">
-                    <label for="apiKey">Gemini API Key</label>
-                    <input type="password" id="apiKey" placeholder="Enter your Gemini API key">
-                    <p class="api-info">
-                        You need a free API key from Google AI Studio. 
-                        <a href="https://makersuite.google.com/app/apikey" target="_blank">Get your key here</a>
-                    </p>
-                </div>
-                <div class="form-group">
-                    <label for="userName">Your Name</label>
-                    <input type="text" id="userName" placeholder="Example: Alejandro" value="Alejandro">
-                </div>
-                <div class="form-group">
-                    <label for="voiceSpeed">Voice Speed</label>
-                    <input type="range" id="voiceSpeed" min="0.8" max="1.3" step="0.05" value="1.05">
-                    <p class="api-info" id="voiceSpeedValue">Speed: Natural (1.05x)</p>
-                </div>
-                <div class="form-group">
-                    <label for="voicePitch">Voice Pitch</label>
-                    <input type="range" id="voicePitch" min="0.5" max="1.5" step="0.1" value="0.9">
-                    <p class="api-info" id="voicePitchValue">Pitch: Masculine (0.9)</p>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" id="closeModal">Cancel</button>
-                <button class="btn btn-primary" id="saveSettings">Save Settings</button>
-            </div>
-        </div>
-    </div>
-    
+
     <script>
-        // DOM Elements
-        const chatContainer = document.getElementById('chatContainer');
-        const micBtn = document.getElementById('micBtn');
-        const micIcon = micBtn.querySelector('i');
-        const waveContainer = document.getElementById('waveContainer');
-        const statusIndicator = document.getElementById('statusIndicator');
-        const recordingIndicator = document.getElementById('recordingIndicator');
-        const settingsBtn = document.getElementById('settingsBtn');
-        const modalOverlay = document.getElementById('modalOverlay');
-        const closeModal = document.getElementById('closeModal');
-        const saveSettings = document.getElementById('saveSettings');
-        const apiKeyInput = document.getElementById('apiKey');
-        const userNameInput = document.getElementById('userName');
-        const voiceSpeedInput = document.getElementById('voiceSpeed');
-        const voiceSpeedValue = document.getElementById('voiceSpeedValue');
-        const voicePitchInput = document.getElementById('voicePitch');
-        const voicePitchValue = document.getElementById('voicePitchValue');
-        
-        // Application state
-        let isRecording = false;
-        let isSendMode = false;
-        let recognition = null;
-        let apiKey = '';
-        let userName = 'Alejandro';
-        // Ajustes para voz más natural
-        let voiceSpeed = 1.05; 
-        let voicePitch = 0.9; 
-        let messageCount = 0;
-        let currentVoice = null;
-        
-        // Check for Web Speech API support
-        const isSpeechRecognitionSupported = 'webkitSpeechRecognition' in window || 'SpeechRecognition' in window;
-        
-        // Initialize speech recognition if supported
-        if (isSpeechRecognitionSupported) {
-            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-            recognition = new SpeechRecognition();
-            recognition.continuous = true;
-            recognition.interimResults = false;
+        // --- Logic Core ---
+        const UI = {
+            chatArea: document.getElementById('chatArea'),
+            micBtn: document.getElementById('micBtn'),
+            statusText: document.getElementById('statusText'),
+            modal: document.getElementById('modalBackdrop'),
+            settingsBtn: document.getElementById('settingsBtn'),
+            saveBtn: document.getElementById('saveBtn'),
+            modalClose: document.getElementById('modalClose'),
+            apiKeyInput: document.getElementById('apiKeyInput'),
+            voiceSelect: document.getElementById('voiceSelect'),
+            rateInput: document.getElementById('rateInput')
+        };
+
+        const STATE = {
+            isRecording: false,
+            apiKey: localStorage.getItem('gemini_key') || '',
+            voices: [],
+            selectedVoiceIndex: -1,
+            rate: 1.0,
+            conversationHistory: [] // To keep context
+        };
+
+        // --- Speech Recognition ---
+        const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        let recognition;
+
+        if (Recognition) {
+            recognition = new Recognition();
+            recognition.continuous = false;
             recognition.lang = 'en-US';
-            
-            recognition.onresult = (event) => {
-                const transcript = event.results[event.results.length - 1][0].transcript;
-                addUserMessage(transcript);
-                processUserInput(transcript);
+            recognition.interimResults = false;
+
+            recognition.onstart = () => {
+                STATE.isRecording = true;
+                UI.micBtn.classList.add('listening');
+                UI.statusText.innerText = "Listening...";
             };
-            
-            recognition.onerror = (event) => {
-                console.error('Speech recognition error:', event.error);
-                if (event.error !== 'no-speech') {
-                    statusIndicator.textContent = 'Voice recognition error';
-                    resetRecordingState();
-                    recordingIndicator.classList.remove('active');
-                    showNotification('Voice recognition error. Please try again.');
-                }
-            };
-            
+
             recognition.onend = () => {
-                if (isRecording) {
-                    // If still recording (user hasn't stopped), restart recognition
-                    setTimeout(() => {
-                        if (isRecording) {
-                            try {
-                                recognition.start();
-                            } catch (e) {
-                                console.error('Error restarting recognition:', e);
-                            }
-                        }
-                    }, 100);
-                }
+                STATE.isRecording = false;
+                UI.micBtn.classList.remove('listening');
+                UI.statusText.innerText = "Processing...";
+            };
+
+            recognition.onresult = (event) => {
+                const text = event.results[0][0].transcript;
+                handleUserInput(text);
             };
         } else {
-            statusIndicator.textContent = 'Voice recognition not supported in this browser';
-            micBtn.disabled = true;
-            micBtn.style.opacity = '0.5';
-            showNotification('Voice recognition is not supported in your browser. Please use Chrome or Edge.');
+            UI.statusText.innerText = "Speech API not supported.";
         }
+
+        // --- Interaction Handlers ---
+        UI.micBtn.addEventListener('mousedown', startListening);
+        UI.micBtn.addEventListener('touchstart', (e) => { e.preventDefault(); startListening(); });
         
-        // Initialize from localStorage
-        function initFromStorage() {
-            const savedApiKey = localStorage.getItem('geminiApiKey');
-            const savedUserName = localStorage.getItem('userName');
-            const savedVoiceSpeed = localStorage.getItem('voiceSpeed');
-            const savedVoicePitch = localStorage.getItem('voicePitch');
-            
-            if (savedApiKey) {
-                apiKeyInput.value = savedApiKey;
-                apiKey = savedApiKey;
-            }
-            
-            if (savedUserName) {
-                userNameInput.value = savedUserName;
-                userName = savedUserName;
-            }
-            
-            if (savedVoiceSpeed) {
-                voiceSpeedInput.value = savedVoiceSpeed;
-                voiceSpeed = parseFloat(savedVoiceSpeed);
-                updateVoiceSpeedValue();
-            }
-            
-            if (savedVoicePitch) {
-                voicePitchInput.value = savedVoicePitch;
-                voicePitch = parseFloat(savedVoicePitch);
-                updateVoicePitchValue();
-            }
-            
-            // Load available voices and select a male voice
-            loadVoices();
+        UI.micBtn.addEventListener('mouseup', stopListening);
+        UI.micBtn.addEventListener('touchend', stopListening);
+
+        function startListening() {
+            if (speechSynthesis.speaking) speechSynthesis.cancel();
+            try { recognition.start(); } catch(e) { console.log(e); }
         }
-        
-        // Load available voices and select a better male voice
-        function loadVoices() {
-            if ('speechSynthesis' in window) {
-                const voices = speechSynthesis.getVoices();
-                if (voices.length > 0) {
-                    selectBestMaleVoice(voices);
+
+        function stopListening() {
+            try { recognition.stop(); } catch(e) { console.log(e); }
+        }
+
+        async function handleUserInput(text) {
+            addMessage(text, 'user');
+            
+            // Show loading bubble
+            const loadingId = addLoadingBubble();
+
+            try {
+                let data;
+                if (STATE.apiKey) {
+                    data = await callGemini(text);
                 } else {
-                    speechSynthesis.onvoiceschanged = () => {
-                        const voices = speechSynthesis.getVoices();
-                        selectBestMaleVoice(voices);
-                    };
+                    data = fallbackLogic(text); // Simula inteligencia si no hay key
                 }
+
+                removeMessage(loadingId);
+                
+                // Display Correction if exists
+                if (data.correction) {
+                    addCorrectionMessage(data.correction);
+                }
+
+                // Display Response
+                addMessage(data.response, 'bot');
+
+                // Speak
+                let speechText = data.response;
+                if (data.correction) {
+                    // Say correction first
+                    speechText = `Actually, instead of "${data.correction.mistake}", it is better to say "${data.correction.fix}". ${data.response}`;
+                }
+                speak(speechText);
+
+            } catch (error) {
+                removeMessage(loadingId);
+                addMessage("I'm having trouble connecting to my brain. Please check your API Key in settings.", 'bot');
             }
         }
-        
-        // Advanced selection logic for the most natural male voice
-        function selectBestMaleVoice(voices) {
-            // Priority list for known high-quality voices
-            const preferredVoices = [
-                'Google US English', 
-                'Microsoft Guy Online (Natural)',
-                'Microsoft David', 
-                'Daniel'
+
+        // --- Gemini API (The Brain) ---
+        async function callGemini(userText) {
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${STATE.apiKey}`;
+            
+            // Build history context
+            const historyText = STATE.conversationHistory.slice(-4).map(m => `${m.role}: ${m.text}`).join('\n');
+
+            const systemPrompt = `
+                You are Professor Sterling, a male English tutor. 
+                Your goal is to have a natural conversation while correcting grammar errors.
+                
+                1. ANALYZE the user's input: "${userText}"
+                2. CONTEXT of chat: \n${historyText}
+                3. OUTPUT must be a raw JSON object (no markdown) with this structure:
+                {
+                    "correction": null or {
+                        "mistake": "the part of user text with error",
+                        "fix": "the corrected version",
+                        "explanation": "brief reason why"
+                    },
+                    "response": "A natural, engaging reply (max 2 sentences) to continue the conversation."
+                }
+                
+                If the input is perfect English, "correction" should be null.
+                If there is a grammar, vocabulary, or naturalness error, fill the correction object.
+                Ignore punctuation errors unless severe.
+            `;
+
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text: systemPrompt }] }]
+                })
+            });
+
+            const raw = await response.json();
+            let textResponse = raw.candidates[0].content.parts[0].text;
+            
+            // Clean markdown if present
+            textResponse = textResponse.replace(/```json/g, '').replace(/```/g, '').trim();
+            
+            const jsonResponse = JSON.parse(textResponse);
+            
+            // Save context
+            STATE.conversationHistory.push({ role: 'User', text: userText });
+            STATE.conversationHistory.push({ role: 'Sterling', text: jsonResponse.response });
+
+            return jsonResponse;
+        }
+
+        // --- Fallback Logic (Simulated Intelligence) ---
+        function fallbackLogic(text) {
+            const lower = text.toLowerCase();
+            let correction = null;
+            let response = "That's interesting! Tell me more.";
+
+            // Expanded Regex Rules for common mistakes
+            const rules = [
+                { match: /\b(he|she|it) don't\b/, fix: "$1 doesn't", expl: "Third person singular uses 'doesn't'." },
+                { match: /\b(I|you|we|they) has\b/, fix: "$1 have", expl: "With I/You/We/They, use 'have'." },
+                { match: /\bI am agree\b/, fix: "I agree", expl: "'Agree' is a verb, so you don't need 'am'." },
+                { match: /\bpeople is\b/, fix: "people are", expl: "'People' is plural." },
+                { match: /\bmuch (people|friends|chairs)\b/, fix: "many $1", expl: "Use 'many' for countable nouns." },
+                { match: /\blisten music\b/, fix: "listen to music", expl: "We always say 'listen to' something." },
+                { match: /\bmarried with\b/, fix: "married to", expl: "In English, you are married 'to' someone." },
+                { match: /\bI am boring\b/, fix: "I am bored", expl: "If you feel it, you are 'bored'. If something causes it, it is 'boring'." }
             ];
 
-            let selectedVoice = null;
-
-            // 1. Try to find preferred voices specifically
-            for (const pref of preferredVoices) {
-                const found = voices.find(v => v.name.includes(pref));
-                if (found) {
-                    selectedVoice = found;
+            for (let r of rules) {
+                if (r.match.test(lower)) {
+                    correction = {
+                        mistake: text.match(r.match)[0],
+                        fix: text.replace(r.match, r.fix), // Simple text replace for demo
+                        explanation: r.expl
+                    };
                     break;
                 }
             }
 
-            // 2. If no preferred voice, search for ANY male voice
-            if (!selectedVoice) {
-                const maleVoice = voices.find(v => 
-                    v.lang.startsWith('en') && 
-                    (v.name.toLowerCase().includes('male') || v.name.toLowerCase().includes('man'))
-                );
-                if (maleVoice) selectedVoice = maleVoice;
+            // Keyword Context
+            if (lower.includes('hello') || lower.includes('hi')) response = "Hello! I'm ready to help you practice.";
+            else if (lower.includes('name')) response = "My name is Sterling. What's yours?";
+            else if (lower.includes('music')) response = "I love music. What's your favorite genre?";
+            else if (lower.includes('football') || lower.includes('soccer')) response = "Sports are a great topic. Do you play any?";
+            else if (lower.includes('food') || lower.includes('eat')) response = "Talking about food makes me hungry. What's your favorite dish?";
+            
+            // Fallback warning
+            if (!STATE.apiKey) {
+                response += " (Note: Add API Key in settings for real intelligence and full error detection).";
             }
 
-            // 3. Last resort: any English voice
-            if (!selectedVoice) {
-                selectedVoice = voices.find(v => v.lang.startsWith('en'));
-            }
-
-            if (selectedVoice) {
-                currentVoice = selectedVoice;
-                console.log('Voice selected:', currentVoice.name);
-            }
-        }
-        
-        // Update voice speed display
-        function updateVoiceSpeedValue() {
-            let speedText = 'Normal';
-            if (voiceSpeed < 0.9) speedText = 'Slow';
-            if (voiceSpeed > 1.1) speedText = 'Fast';
-            voiceSpeedValue.textContent = `Speed: ${speedText} (${voiceSpeed.toFixed(2)}x)`;
-        }
-        
-        // Update voice pitch display
-        function updateVoicePitchValue() {
-            let pitchText = 'Masculine';
-            if (voicePitch < 0.8) pitchText = 'Deep';
-            if (voicePitch > 1.0) pitchText = 'Higher';
-            voicePitchValue.textContent = `Pitch: ${pitchText} (${voicePitch.toFixed(1)})`;
-        }
-        
-        // Start recording
-        function startRecording() {
-            if (!isSpeechRecognitionSupported) return;
-            
-            isRecording = true;
-            isSendMode = false;
-            micBtn.classList.add('recording');
-            waveContainer.classList.add('active');
-            recordingIndicator.classList.add('active');
-            statusIndicator.textContent = 'Listening... Release to send';
-            micIcon.className = 'fas fa-microphone';
-            
-            // Stop any current speech
-            if ('speechSynthesis' in window) {
-                speechSynthesis.cancel();
-            }
-
-            try {
-                recognition.start();
-            } catch (error) {
-                console.error('Error starting speech recognition:', error);
-                showNotification('Error starting microphone. Please check permissions.');
-                resetRecordingState();
-            }
-        }
-        
-        // Stop recording and send
-        function stopRecording() {
-            if (!isRecording) return;
-            
-            isRecording = false;
-            isSendMode = true;
-            micBtn.classList.remove('recording');
-            micBtn.classList.add('send-mode');
-            waveContainer.classList.remove('active');
-            recordingIndicator.classList.remove('active');
-            statusIndicator.textContent = 'Ready to send. Tap to send or hold to record again';
-            micIcon.className = 'fas fa-paper-plane';
-            
-            if (recognition) {
-                try {
-                    recognition.stop();
-                } catch (e) {
-                    console.error('Error stopping recognition:', e);
-                }
-            }
-        }
-        
-        // Reset to initial state
-        function resetRecordingState() {
-            isRecording = false;
-            isSendMode = false;
-            micBtn.classList.remove('recording', 'send-mode');
-            waveContainer.classList.remove('active');
-            recordingIndicator.classList.remove('active');
-            statusIndicator.textContent = 'Press and hold to speak';
-            micIcon.className = 'fas fa-microphone';
-        }
-        
-        // Add user message to chat
-        function addUserMessage(text) {
-            if (!text.trim()) return;
-            
-            const userInitial = userName.charAt(0).toUpperCase();
-            
-            const messageDiv = document.createElement('div');
-            messageDiv.className = 'user-message';
-            messageDiv.innerHTML = `
-                <div class="user-message-wrapper">
-                    <div class="user-avatar">${userInitial}</div>
-                    <div class="user-message-content">
-                        <div class="user-text">${escapeHtml(text)}</div>
-                    </div>
-                </div>
-                <button class="translation-btn" title="Translate to Spanish" onclick="translateMessage(this, '${escapeSingleQuotes(text)}')">
-                    <i class="fas fa-language"></i>
-                </button>
-            `;
-            
-            chatContainer.appendChild(messageDiv);
-            chatContainer.scrollTop = chatContainer.scrollHeight;
-            messageCount++;
-        }
-        
-        // Add bot message to chat with optional correction and recommendation
-        function addBotMessage(content, correction = null, recommendation = null) {
-            const messageDiv = document.createElement('div');
-            messageDiv.className = 'bot-message';
-            
-            let correctionHTML = '';
-            if (correction) {
-                correctionHTML = `
-                    <div class="correction-container">
-                        <div class="correction-title">
-                            <i class="fas fa-exclamation-circle"></i>
-                            <span>Correction</span>
-                        </div>
-                        <div class="error-text">${correction.error}</div>
-                        <div class="correction-text">${correction.correction}</div>
-                    </div>
-                `;
-            }
-            
-            let recommendationHTML = '';
-            if (recommendation) {
-                recommendationHTML = `
-                    <div class="recommendation-container">
-                        <div class="recommendation-title">
-                            <i class="fas fa-lightbulb"></i>
-                            <span>Natural Expression Tip</span>
-                        </div>
-                        <div class="recommendation-text">${recommendation}</div>
-                    </div>
-                `;
-            }
-            
-            messageDiv.innerHTML = `
-                <div class="bot-message-wrapper">
-                    <img src="https://images.unsplash.com/photo-1568602471122-7832951cc4c5?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80" alt="Prof. Sterling" class="bot-avatar">
-                    <div class="bot-message-content">
-                        <div class="bot-name">Prof. Sterling</div>
-                        ${correctionHTML}
-                        <div class="bot-text">${escapeHtml(content)}</div>
-                        ${recommendationHTML}
-                    </div>
-                </div>
-                <button class="translation-btn" title="Translate to Spanish" onclick="translateMessage(this, '${escapeSingleQuotes(content)}')">
-                    <i class="fas fa-language"></i>
-                </button>
-            `;
-            
-            chatContainer.appendChild(messageDiv);
-            chatContainer.scrollTop = chatContainer.scrollHeight;
-            
-            // Speak the bot's response
-            // MODIFICATION: Add the correction to the speech audio
-            let textToSpeak = content;
-            if (correction) {
-                textToSpeak = `Instead of saying "${correction.error}", try saying "${correction.correction}". ${content}`;
-            }
-            
-            speakText(textToSpeak);
-        }
-        
-        // Process user input and get bot response
-        async function processUserInput(userText) {
-            if (!userText.trim()) {
-                resetRecordingState();
-                return;
-            }
-            
-            // Show typing indicator
-            statusIndicator.textContent = 'Prof. Sterling is typing...';
-            
-            // Check for errors and get corrections
-            const correction = checkForErrors(userText);
-            
-            // Determine if we should give a recommendation
-            const shouldGiveRecommendation = messageCount > 0 && 
-                                           (messageCount % Math.floor(Math.random() * 3 + 3) === 0);
-            
-            const recommendation = shouldGiveRecommendation ? getNaturalExpressionTip() : null;
-            
-            // Generate a response based on the user's input
-            let responseText = "";
-            
-            if (apiKey) {
-                try {
-                    // Call Gemini API if key is present
-                    responseText = await callGeminiAPI(userText);
-                } catch (error) {
-                    console.error("Gemini API Error:", error);
-                    responseText = generateFallbackResponse(userText);
-                }
-            } else {
-                responseText = generateFallbackResponse(userText);
-            }
-            
-            // Add the bot's response after a short delay
-            if (!apiKey) {
-                 setTimeout(() => {
-                    addBotMessage(responseText, correction, recommendation);
-                    statusIndicator.textContent = 'Press and hold to speak';
-                }, 800);
-            } else {
-                addBotMessage(responseText, correction, recommendation);
-                statusIndicator.textContent = 'Press and hold to speak';
-            }
+            return { correction, response };
         }
 
-        async function callGeminiAPI(text) {
-             const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
-             
-             const requestBody = {
-                contents: [{
-                    parts: [{
-                        text: `You are Professor Sterling, an English tutor. Reply to this student naturally, keeping it relatively short (2-3 sentences max) to encourage conversation. Input: "${text}"`
-                    }]
-                }]
-             };
-
-             const response = await fetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(requestBody)
-             });
-
-             const data = await response.json();
-             return data.candidates[0].content.parts[0].text;
-        }
-
-        // Fallback response generator (Client side logic)
-        function generateFallbackResponse(userText, correction, recommendation) {
-            const lowerText = userText.toLowerCase();
-            
-            // Greetings
-            if (lowerText.includes('hello') || lowerText.includes('hi') || lowerText.includes('hey')) {
-                return `Hello ${userName}! How are you doing today? I'm here to help you practice.`;
-            }
-            
-            // How are you
-            if (lowerText.includes('how are you')) {
-                return "I'm doing well, thank you! I'm always ready to help you learn English. How about you?";
-            }
-
-            // Default
-            const encouragements = [
-                `Thanks for sharing that, ${userName}.`,
-                `That's interesting!`,
-                `I see what you mean.`,
-                `Good job expressing yourself!`
-            ];
-            
-            const randomEncouragement = encouragements[Math.floor(Math.random() * encouragements.length)];
-            return `${randomEncouragement} Can you tell me more about that?`;
-        }
-        
-        // Check for common English errors in user text - EXPANDED LIST
-        function checkForErrors(text) {
-            const errorPatterns = [
-                { pattern: /\bgender\b.*\bmusic\b/i, error: "gender of music", correction: "genre of music" },
-                { pattern: /\bi have went\b/i, error: "I have went", correction: "I have gone" },
-                { pattern: /\bshe don't\b/i, error: "she don't", correction: "she doesn't" },
-                { pattern: /\bhe don't\b/i, error: "he don't", correction: "he doesn't" },
-                { pattern: /\bit don't\b/i, error: "it don't", correction: "it doesn't" },
-                { pattern: /\bmore better\b/i, error: "more better", correction: "better" },
-                { pattern: /\bi am agree\b/i, error: "I am agree", correction: "I agree" },
-                { pattern: /\bfor explain\b/i, error: "for explain", correction: "to explain" },
-                { pattern: /\bpeople is\b/i, error: "people is", correction: "people are" },
-                { pattern: /\bi has\b/i, error: "I has", correction: "I have" },
-                { pattern: /\byou is\b/i, error: "you is", correction: "you are" }
-            ];
-            
-            for (const pattern of errorPatterns) {
-                if (pattern.pattern.test(text)) {
-                    // Extract exact match for better error display
-                    const match = text.match(pattern.pattern);
-                    const specificError = match ? match[0] : pattern.error;
-                    return { error: specificError, correction: pattern.correction };
-                }
-            }
-            return null;
-        }
-        
-        function getNaturalExpressionTip() {
-            const tips = [
-                "Instead of 'I think that...', say 'I reckon...' or 'I believe...'",
-                "Try saying 'awesome' or 'fantastic' instead of just 'very good'.",
-                "Native speakers often use 'gonna' (going to) and 'wanna' (want to) in casual speech.",
-                "Use 'actually' to politely correct someone or clarify a point."
-            ];
-            return tips[Math.floor(Math.random() * tips.length)];
-        }
-        
-        // IMPROVED: Speak text with better flow and less robotic timing
-        function speakText(text) {
-            if ('speechSynthesis' in window) {
-                speechSynthesis.cancel(); // Stop previous speech
-                
-                const utterance = new SpeechSynthesisUtterance(text);
-                
-                utterance.lang = 'en-US';
-                utterance.rate = voiceSpeed; // 1.05 is usually better for male voices
-                utterance.pitch = voicePitch; // 0.9 is deeper/more masculine
-                utterance.volume = 1;
-                
-                if (currentVoice) {
-                    utterance.voice = currentVoice;
-                }
-                
-                speechSynthesis.speak(utterance);
-            }
-        }
-        
-        // Translate message
-        function translateMessage(button, text) {
-            const originalText = button.innerHTML;
-            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-            button.disabled = true;
-            
-            setTimeout(() => {
-                button.innerHTML = '<i class="fas fa-language"></i>';
-                button.disabled = false;
-                showNotification(`Translated: "${text.substring(0, 40)}..."`);
-            }, 800);
-        }
-        
-        // Show notification
-        function showNotification(message) {
-            const existingNotification = document.querySelector('.temp-notification');
-            if (existingNotification) existingNotification.remove();
-            
-            const notification = document.createElement('div');
-            notification.textContent = message;
-            notification.className = 'temp-notification';
-            notification.style.cssText = `
-                position: fixed; bottom: 120px; left: 50%; transform: translateX(-50%);
-                background: var(--primary); color: white; padding: 10px 15px;
-                border-radius: var(--radius-md); z-index: 1000; max-width: 80%;
-                text-align: center; box-shadow: var(--shadow-lg); font-weight: 500;
-                font-size: 0.85rem; word-wrap: break-word;
-            `;
-            
-            document.body.appendChild(notification);
-            setTimeout(() => {
-                if (notification.parentNode) document.body.removeChild(notification);
-            }, 3000);
-        }
-        
-        function escapeHtml(text) {
+        // --- UI Rendering ---
+        function addMessage(text, type) {
             const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
+            div.className = `message ${type}`;
+            const avatarUrl = type === 'bot' 
+                ? 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?ixlib=rb-4.0.3&auto=format&fit=crop&w=200&q=80'
+                : 'https://cdn-icons-png.flaticon.com/512/847/847969.png'; // Generic user icon
+            
+            div.innerHTML = `
+                <img src="${avatarUrl}" class="msg-avatar">
+                <div class="msg-content">
+                    <div class="msg-bubble">${marked.parse(text)}</div>
+                </div>
+            `;
+            UI.chatArea.appendChild(div);
+            div.scrollIntoView({ behavior: 'smooth' });
         }
-        
-        function escapeSingleQuotes(text) {
-            return text.replace(/'/g, "\\'");
-        }
-        
-        // Event Listeners
-        const handleInteractionStart = (e) => {
-            e.preventDefault();
-            if (!isSendMode) startRecording();
-        };
 
-        const handleInteractionEnd = (e) => {
-            e.preventDefault();
-            if (isRecording && !isSendMode) {
-                stopRecording();
-            } else if (isSendMode) {
-                const lastUserMessage = document.querySelector('.user-message:last-child .user-text');
-                if (lastUserMessage) processUserInput(lastUserMessage.textContent);
-                else resetRecordingState();
+        function addCorrectionMessage(data) {
+            const div = document.createElement('div');
+            div.className = 'message bot'; // Bot correction
+            div.innerHTML = `
+                <img src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?ixlib=rb-4.0.3&auto=format&fit=crop&w=200&q=80" class="msg-avatar">
+                <div class="msg-content">
+                    <div class="correction-box">
+                        <div class="correction-header"><i class="fas fa-tools"></i> Correction</div>
+                        <span class="diff-error">"${data.mistake}"</span>
+                        <span class="diff-correct">"${data.fix}"</span>
+                        <div class="diff-explanation">${data.explanation}</div>
+                    </div>
+                </div>
+            `;
+            UI.chatArea.appendChild(div);
+        }
+
+        function addLoadingBubble() {
+            const id = 'loading-' + Date.now();
+            const div = document.createElement('div');
+            div.id = id;
+            div.className = 'message bot';
+            div.innerHTML = `
+                <img src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?ixlib=rb-4.0.3&auto=format&fit=crop&w=200&q=80" class="msg-avatar">
+                <div class="msg-content">
+                    <div class="msg-bubble" style="color:var(--text-muted); font-style:italic;">
+                        <i class="fas fa-circle-notch fa-spin"></i> Thinking...
+                    </div>
+                </div>
+            `;
+            UI.chatArea.appendChild(div);
+            div.scrollIntoView({ behavior: 'smooth' });
+            return id;
+        }
+
+        function removeMessage(id) {
+            const el = document.getElementById(id);
+            if (el) el.remove();
+        }
+
+        // --- TTS Engine (Voice) ---
+        function loadVoices() {
+            STATE.voices = speechSynthesis.getVoices();
+            UI.voiceSelect.innerHTML = '<option value="auto">Auto-Detect Male Voice</option>';
+            
+            STATE.voices.forEach((voice, index) => {
+                const opt = document.createElement('option');
+                opt.value = index;
+                opt.text = `${voice.name} (${voice.lang})`;
+                UI.voiceSelect.appendChild(opt);
+            });
+        }
+        speechSynthesis.onvoiceschanged = loadVoices;
+
+        function speak(text) {
+            speechSynthesis.cancel();
+            const utterance = new SpeechSynthesisUtterance(text);
+            
+            // Voice Selection Logic
+            if (UI.voiceSelect.value === 'auto') {
+                // Smart auto-detect logic for male voices
+                const preferred = [
+                    "Google US English", "Microsoft David", "Microsoft Guy", "Daniel", "Google UK English Male"
+                ];
+                let selected = STATE.voices.find(v => preferred.some(p => v.name.includes(p)));
+                
+                // If no premium male voice found, try to find ANY male voice
+                if (!selected) {
+                    selected = STATE.voices.find(v => v.name.toLowerCase().includes('male') && v.lang.startsWith('en'));
+                }
+                // Fallback to any English voice
+                if (!selected) {
+                    selected = STATE.voices.find(v => v.lang.startsWith('en'));
+                }
+                
+                if (selected) utterance.voice = selected;
+                // Pitch tweak for "masculine" feel if fallback is generic
+                utterance.pitch = 0.9; 
+            } else {
+                utterance.voice = STATE.voices[parseInt(UI.voiceSelect.value)];
+                utterance.pitch = 1.0; // Use natural pitch of selected voice
             }
+
+            utterance.rate = STATE.rate;
+            speechSynthesis.speak(utterance);
+        }
+
+        // --- Settings Modal ---
+        UI.settingsBtn.onclick = () => UI.modal.classList.add('active');
+        UI.modalClose.onclick = () => UI.modal.classList.remove('active');
+        
+        UI.saveBtn.onclick = () => {
+            STATE.apiKey = UI.apiKeyInput.value;
+            STATE.rate = parseFloat(UI.rateInput.value);
+            localStorage.setItem('gemini_key', STATE.apiKey);
+            UI.modal.classList.remove('active');
+            addMessage("Settings saved. " + (STATE.apiKey ? "AI Brain Active." : "Using Basic Mode."), 'bot');
         };
 
-        micBtn.addEventListener('mousedown', handleInteractionStart);
-        micBtn.addEventListener('mouseup', handleInteractionEnd);
-        micBtn.addEventListener('touchstart', handleInteractionStart);
-        micBtn.addEventListener('touchend', handleInteractionEnd);
+        // Init
+        UI.apiKeyInput.value = STATE.apiKey;
+        loadVoices();
         
-        // Voice settings listeners
-        voiceSpeedInput.addEventListener('input', () => {
-            voiceSpeed = parseFloat(voiceSpeedInput.value);
-            updateVoiceSpeedValue();
-        });
-        
-        voicePitchInput.addEventListener('input', () => {
-            voicePitch = parseFloat(voicePitchInput.value);
-            updateVoicePitchValue();
-        });
-        
-        // Settings modal
-        settingsBtn.addEventListener('click', () => modalOverlay.classList.add('active'));
-        closeModal.addEventListener('click', () => modalOverlay.classList.remove('active'));
-        
-        saveSettings.addEventListener('click', () => {
-            apiKey = apiKeyInput.value.trim();
-            userName = userNameInput.value.trim() || 'Alejandro';
-            voiceSpeed = parseFloat(voiceSpeedInput.value);
-            voicePitch = parseFloat(voicePitchInput.value);
-            
-            localStorage.setItem('geminiApiKey', apiKey);
-            localStorage.setItem('userName', userName);
-            localStorage.setItem('voiceSpeed', voiceSpeed);
-            localStorage.setItem('voicePitch', voicePitch);
-            
-            updateVoiceSpeedValue();
-            updateVoicePitchValue();
-            modalOverlay.classList.remove('active');
-            showNotification('Settings saved successfully!');
-        });
-        
-        modalOverlay.addEventListener('click', (e) => {
-            if (e.target === modalOverlay) modalOverlay.classList.remove('active');
-        });
-        
-        function initApp() {
-            initFromStorage();
-            adjustChatContainerPadding();
-        }
-        
-        function adjustChatContainerPadding() {
-            const inputAreaHeight = document.querySelector('.input-area').offsetHeight;
-            chatContainer.style.paddingBottom = `${inputAreaHeight + 20}px`;
-        }
-        
-        window.addEventListener('DOMContentLoaded', initApp);
-        window.addEventListener('resize', adjustChatContainerPadding);
-        window.translateMessage = translateMessage;
     </script>
 </body>
 </html>
