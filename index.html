@@ -52,7 +52,7 @@
             flex: 1;
             overflow-y: auto;
             scroll-behavior: smooth;
-            padding-bottom: 120px; /* Espacio para el footer */
+            padding-bottom: 140px; /* Espacio aumentado para el footer más alto */
         }
 
         .chat-container::-webkit-scrollbar {
@@ -78,7 +78,7 @@
         }
         .bar {
             width: 4px;
-            background-color: #2563EB;
+            background-color: #10B981; /* Verde cuando graba */
             border-radius: 2px;
             animation: wave 1s ease-in-out infinite;
         }
@@ -89,13 +89,13 @@
 
         /* Botón de micrófono pulsante */
         .mic-button-shadow {
-            box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.7);
-            animation: pulse-blue 2s infinite;
+            box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+            animation: pulse-green 2s infinite;
         }
-        @keyframes pulse-blue {
-            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.7); }
-            70% { transform: scale(1); box-shadow: 0 0 0 20px rgba(37, 99, 235, 0); }
-            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(37, 99, 235, 0); }
+        @keyframes pulse-green {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 20px rgba(16, 185, 129, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
         }
     </style>
 </head>
@@ -125,7 +125,7 @@
             <img src="https://randomuser.me/api/portraits/men/32.jpg" class="w-8 h-8 rounded-full self-start mt-1">
             <div class="flex flex-col max-w-[85%]">
                 <div class="bg-white p-4 rounded-2xl rounded-tl-none shadow-sm border border-gray-100 text-gray-700">
-                    <p>Hello! I'm Prof. Alex. I'm here to help you practice English. We can talk about any topic you like. If you make a mistake, I'll help you correct it. What should we talk about today?</p>
+                    <p>Hello! I'm Prof. Alex. Tap the microphone to start speaking. Take your time, and tap the Send button when you are done.</p>
                 </div>
                 <!-- Botón de traducción -->
                 <button onclick="translateText('Hello! I\'m Prof. Alex...')" class="self-end mt-1 text-xs text-gray-400 hover:text-blue-500 flex items-center gap-1 bg-white px-2 py-1 rounded-full border border-gray-100 shadow-sm transition-all">
@@ -144,7 +144,10 @@
         </div>
 
         <div class="flex flex-col items-center justify-center relative">
-            <p id="statusText" class="text-sm text-gray-400 mb-4 h-5">Presiona el micrófono para hablar</p>
+            <!-- Vista previa del texto -->
+            <div id="livePreview" class="w-full text-center mb-4 min-h-[1.5rem] px-4">
+                <p id="statusText" class="text-sm text-gray-400 transition-colors">Toca el micrófono para empezar</p>
+            </div>
             
             <button id="micBtn" class="w-16 h-16 bg-blue-600 hover:bg-blue-700 text-white rounded-full flex items-center justify-center transition-all shadow-lg active:scale-95">
                 <i class="fa-solid fa-microphone text-2xl"></i>
@@ -176,7 +179,9 @@
         // --- Estado de la Aplicación ---
         const state = {
             apiKey: localStorage.getItem('gemini_api_key') || '',
-            isListening: false,
+            isRecording: false,      // ¿Estamos en modo grabación?
+            userStopped: false,      // ¿El usuario pulsó detener manualmente?
+            transcriptAccumulator: '', // Acumulador para pausas largas
             recognition: null,
             synthesis: window.speechSynthesis,
             messages: []
@@ -201,29 +206,69 @@
             if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
                 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
                 state.recognition = new SpeechRecognition();
-                state.recognition.lang = 'en-US'; // Escucha en inglés
-                state.recognition.interimResults = false;
+                state.recognition.lang = 'en-US';
+                state.recognition.continuous = true; // CLAVE: No detenerse en silencio
+                state.recognition.interimResults = true; // Para mostrar preview
                 state.recognition.maxAlternatives = 1;
 
                 state.recognition.onstart = () => {
-                    state.isListening = true;
-                    updateUIState('listening');
+                    // Solo actualizamos UI si realmente estamos en modo grabación lógica
+                    if(state.isRecording) {
+                        updateUIState('recording');
+                    }
                 };
 
                 state.recognition.onend = () => {
-                    state.isListening = false;
-                    updateUIState('idle');
+                    // Si el usuario NO lo detuvo (ej. corte del navegador), reiniciamos
+                    if (state.isRecording && !state.userStopped) {
+                        console.log("Reiniciando reconocimiento...");
+                        try {
+                            state.recognition.start();
+                        } catch (e) {
+                            console.log("Error al reiniciar inmediato:", e);
+                        }
+                    } else if (state.userStopped) {
+                        // El usuario detuvo y quiere enviar
+                        updateUIState('processing');
+                        handleFinalSend();
+                    } else {
+                        updateUIState('idle');
+                    }
                 };
 
                 state.recognition.onresult = (event) => {
-                    const transcript = event.results[0][0].transcript;
-                    handleUserMessage(transcript);
+                    let interimTranscript = '';
+                    let finalChunk = '';
+
+                    for (let i = event.resultIndex; i < event.results.length; ++i) {
+                        if (event.results[i].isFinal) {
+                            finalChunk += event.results[i][0].transcript;
+                        } else {
+                            interimTranscript += event.results[i][0].transcript;
+                        }
+                    }
+
+                    // Acumulamos lo confirmado
+                    state.transcriptAccumulator += finalChunk;
+                    
+                    // Mostramos preview (Acumulado + Interino)
+                    const display = state.transcriptAccumulator + interimTranscript;
+                    if (display) {
+                        els.statusText.textContent = display;
+                        els.statusText.classList.add('text-gray-800', 'font-medium');
+                        els.statusText.classList.remove('text-gray-400');
+                    }
                 };
                 
                 state.recognition.onerror = (event) => {
                     console.error('Speech recognition error', event.error);
-                    updateUIState('error');
-                    state.isListening = false;
+                    if (event.error === 'no-speech') {
+                        // Ignorar error de no habla, mantener vivo
+                        return;
+                    }
+                    state.isRecording = false;
+                    updateUIState('idle');
+                    renderSystemMessage("Error de micrófono: " + event.error);
                 };
 
             } else {
@@ -235,31 +280,87 @@
             if (state.apiKey) els.apiKeyInput.value = state.apiKey;
         }
 
+        // --- Lógica de Envío ---
+        function handleMicClick() {
+            if (!state.isRecording) {
+                // START RECORDING
+                state.isRecording = true;
+                state.userStopped = false;
+                state.transcriptAccumulator = ''; // Limpiar buffer anterior
+                els.statusText.textContent = "Escuchando..."; 
+                
+                try {
+                    state.recognition.start();
+                } catch(e) {
+                    console.error("Error start:", e);
+                }
+                updateUIState('recording');
+
+            } else {
+                // STOP AND SEND
+                state.userStopped = true; // Bandera para que onend sepa que debe enviar
+                state.recognition.stop();
+                // La lógica de envío real ocurre en 'onend' para asegurar que tenemos todo el texto
+            }
+        }
+
+        function handleFinalSend() {
+            const textToSend = state.transcriptAccumulator.trim();
+            
+            if (!textToSend) {
+                // Si no dijo nada, volver a idle sin enviar
+                updateUIState('idle');
+                els.statusText.textContent = "No se detectó voz. Intenta de nuevo.";
+                return;
+            }
+
+            handleUserMessage(textToSend);
+        }
+
         // --- Manejo de la Interfaz (UI) ---
         function updateUIState(status) {
-            if (status === 'listening') {
+            if (status === 'recording') {
                 els.listeningIndicator.classList.add('active');
-                els.micBtn.classList.add('mic-button-shadow');
-                els.micBtn.classList.replace('bg-blue-600', 'bg-red-500');
-                els.micBtn.innerHTML = '<i class="fa-solid fa-stop text-2xl"></i>';
-                els.statusText.textContent = "Listening...";
-                els.statusText.classList.add('text-blue-600');
+                
+                // Botón se convierte en Enviar (Avión/Verde)
+                els.micBtn.classList.add('mic-button-shadow'); // Sombra verde
+                els.micBtn.classList.remove('bg-blue-600', 'hover:bg-blue-700');
+                els.micBtn.classList.add('bg-green-500', 'hover:bg-green-600');
+                els.micBtn.innerHTML = '<i class="fa-solid fa-paper-plane text-2xl pr-1"></i>'; // Icono enviar
+                
+                // Texto de estado gestionado por onresult, pero backup aquí
+                if(state.transcriptAccumulator === '') {
+                     els.statusText.textContent = "Te escucho... (Pulsa para enviar)";
+                }
+
             } else if (status === 'processing') {
                 els.listeningIndicator.classList.remove('active');
                 els.micBtn.classList.remove('mic-button-shadow');
-                els.micBtn.classList.replace('bg-red-500', 'bg-gray-400');
+                
+                // Botón gris cargando
+                els.micBtn.classList.remove('bg-green-500', 'hover:bg-green-600', 'bg-blue-600');
+                els.micBtn.classList.add('bg-gray-400');
                 els.micBtn.disabled = true;
                 els.micBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-2xl"></i>';
+                
                 els.statusText.textContent = "Thinking...";
-                els.statusText.classList.remove('text-blue-600');
-            } else {
+                els.statusText.classList.remove('text-gray-800', 'font-medium');
+                els.statusText.classList.add('text-blue-600');
+
+            } else { // Idle
+                state.isRecording = false;
                 els.listeningIndicator.classList.remove('active');
                 els.micBtn.classList.remove('mic-button-shadow');
-                els.micBtn.classList.remove('bg-gray-400', 'bg-red-500');
-                els.micBtn.classList.add('bg-blue-600');
+                
+                // Volver a micrófono azul
+                els.micBtn.classList.remove('bg-green-500', 'bg-gray-400', 'hover:bg-green-600');
+                els.micBtn.classList.add('bg-blue-600', 'hover:bg-blue-700');
                 els.micBtn.disabled = false;
                 els.micBtn.innerHTML = '<i class="fa-solid fa-microphone text-2xl"></i>';
-                els.statusText.textContent = "Presiona para hablar";
+                
+                els.statusText.textContent = "Toca el micrófono para hablar";
+                els.statusText.classList.remove('text-blue-600', 'text-gray-800', 'font-medium');
+                els.statusText.classList.add('text-gray-400');
             }
         }
 
@@ -286,11 +387,7 @@
         function renderBotResponse(data) {
             let correctionBlock = '';
 
-            // Si hay corrección, generamos el bloque específico
             if (data.correction && data.correction.hasError) {
-                // Parseamos el texto para colorear: Esperamos formato del prompt [wrong]word[/wrong] -> [correct]word[/correct]
-                // Simplificación: El prompt devolverá HTML básico seguro
-                
                 correctionBlock = `
                     <div class="bg-white p-4 rounded-xl shadow-sm border-l-4 border-green-500 mb-3 w-full">
                         <div class="flex items-center gap-2 mb-2">
@@ -331,6 +428,7 @@
         // --- Lógica Principal (API de Gemini) ---
         async function handleUserMessage(text) {
             renderUserMessage(text);
+            // El UI state ya debería estar en processing desde onend, pero reforzamos por si acaso
             updateUIState('processing');
 
             if (!state.apiKey) {
@@ -353,7 +451,6 @@
         async function fetchGeminiResponse(userText) {
             const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${state.apiKey}`;
             
-            // Prompt Ingeniería para JSON Estructurado
             const systemPrompt = `
                 You are Prof. Alex, a friendly and professional English tutor. 
                 Your goal is to converse with the user and CORRECT their grammar/vocabulary mistakes.
@@ -410,7 +507,6 @@
         function speakText(text) {
             if (!state.synthesis) return;
             
-            // Cancelar habla anterior
             state.synthesis.cancel();
 
             const utterance = new SpeechSynthesisUtterance(text);
@@ -418,10 +514,13 @@
             utterance.rate = 1;
             utterance.pitch = 1;
 
-            // Intentar buscar una voz masculina de Google o Microsoft
             const voices = state.synthesis.getVoices();
-            const maleVoice = voices.find(v => (v.name.includes('Male') || v.name.includes('Google US English')) && v.lang.startsWith('en'));
-            if (maleVoice) utterance.voice = maleVoice;
+            // Buscar voz preferida: Microsoft David/Mark/Zira o Google US English
+            const preferredVoice = voices.find(v => 
+                (v.name.includes('Google US English') || v.name.includes('Microsoft David')) && v.lang.startsWith('en')
+            );
+            
+            if (preferredVoice) utterance.voice = preferredVoice;
 
             state.synthesis.speak(utterance);
         }
@@ -437,22 +536,14 @@
             return text.replace(/'/g, "\\'");
         }
         
-        // Función global para el botón de traducir
         window.translateText = (text) => {
             const url = `https://translate.google.com/?sl=en&tl=es&text=${encodeURIComponent(text)}&op=translate`;
             window.open(url, '_blank');
         };
 
         // --- Event Listeners ---
-        els.micBtn.addEventListener('click', () => {
-            if (state.isListening) {
-                state.recognition.stop();
-            } else {
-                state.recognition.start();
-            }
-        });
+        els.micBtn.addEventListener('click', handleMicClick);
 
-        // Config Modal
         els.settingsBtn.addEventListener('click', () => {
             els.settingsModal.classList.remove('hidden');
             els.settingsModal.classList.add('flex');
@@ -474,10 +565,7 @@
             }
         });
 
-        // Inicializar
         init();
-        
-        // Cargar voces (chrome a veces tarda)
         window.speechSynthesis.onvoiceschanged = () => {};
 
     </script>
