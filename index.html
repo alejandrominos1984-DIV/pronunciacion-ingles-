@@ -964,13 +964,13 @@
                 </div>
                 <div class="form-group">
                     <label for="voiceSpeed">Voice Speed</label>
-                    <input type="range" id="voiceSpeed" min="0.8" max="1.3" step="0.05" value="1.05">
-                    <p class="api-info" id="voiceSpeedValue">Speed: Natural (1.05x)</p>
+                    <input type="range" id="voiceSpeed" min="0.8" max="1.3" step="0.1" value="1.0">
+                    <p class="api-info" id="voiceSpeedValue">Speed: Normal (1.0x)</p>
                 </div>
                 <div class="form-group">
                     <label for="voicePitch">Voice Pitch</label>
-                    <input type="range" id="voicePitch" min="0.5" max="1.5" step="0.1" value="0.9">
-                    <p class="api-info" id="voicePitchValue">Pitch: Masculine (0.9)</p>
+                    <input type="range" id="voicePitch" min="0.7" max="1.2" step="0.1" value="0.85">
+                    <p class="api-info" id="voicePitchValue">Pitch: Masculine (0.85)</p>
                 </div>
             </div>
             <div class="modal-footer">
@@ -1005,9 +1005,8 @@
         let recognition = null;
         let apiKey = '';
         let userName = 'Alejandro';
-        // Ajustes para voz más natural
-        let voiceSpeed = 1.05; 
-        let voicePitch = 0.9; 
+        let voiceSpeed = 1.0;
+        let voicePitch = 0.85; // Pitch más bajo para voz masculina más natural
         let messageCount = 0;
         let currentVoice = null;
         
@@ -1092,59 +1091,76 @@
             loadVoices();
         }
         
-        // Load available voices and select a better male voice
+        // Load available voices and select a male voice
         function loadVoices() {
             if ('speechSynthesis' in window) {
+                // Get voices when they are loaded
                 const voices = speechSynthesis.getVoices();
                 if (voices.length > 0) {
-                    selectBestMaleVoice(voices);
+                    selectMaleVoice(voices);
                 } else {
+                    // If voices aren't loaded yet, wait for them
                     speechSynthesis.onvoiceschanged = () => {
                         const voices = speechSynthesis.getVoices();
-                        selectBestMaleVoice(voices);
+                        selectMaleVoice(voices);
                     };
                 }
             }
         }
         
-        // Advanced selection logic for the most natural male voice
-        function selectBestMaleVoice(voices) {
-            // Priority list for known high-quality voices
-            const preferredVoices = [
-                'Google US English', 
-                'Microsoft Guy Online (Natural)',
-                'Microsoft David', 
-                'Daniel'
+        // Select a male voice from available voices - MEJORADO para selección más precisa
+        function selectMaleVoice(voices) {
+            console.log('Available voices:', voices.map(v => v.name));
+            
+            // Prioritize male voices
+            const maleVoicePriorities = [
+                { name: 'Google UK English Male', lang: 'en-GB' },
+                { name: 'Microsoft David', lang: 'en-US' },
+                { name: 'Google US English Male', lang: 'en-US' },
+                { name: 'Alex', lang: 'en-US' },
+                { name: 'Daniel', lang: 'en-GB' }
             ];
-
-            let selectedVoice = null;
-
-            // 1. Try to find preferred voices specifically
-            for (const pref of preferredVoices) {
-                const found = voices.find(v => v.name.includes(pref));
-                if (found) {
-                    selectedVoice = found;
-                    break;
+            
+            // Try to find prioritized male voices
+            for (const priority of maleVoicePriorities) {
+                const foundVoice = voices.find(voice => 
+                    voice.name.includes(priority.name) && voice.lang.startsWith('en')
+                );
+                if (foundVoice) {
+                    currentVoice = foundVoice;
+                    console.log('Selected priority male voice:', currentVoice.name);
+                    return;
                 }
             }
-
-            // 2. If no preferred voice, search for ANY male voice
-            if (!selectedVoice) {
-                const maleVoice = voices.find(v => 
-                    v.lang.startsWith('en') && 
-                    (v.name.toLowerCase().includes('male') || v.name.toLowerCase().includes('man'))
+            
+            // Fallback: find any voice that sounds male
+            const maleVoices = voices.filter(voice => {
+                const voiceName = voice.name.toLowerCase();
+                return (
+                    voice.lang.startsWith('en-') && 
+                    (voiceName.includes('male') || 
+                     voiceName.includes('man') ||
+                     voiceName.includes('david') ||
+                     voiceName.includes('alex') ||
+                     voiceName.includes('daniel') ||
+                     (voiceName.includes('google') && !voiceName.includes('female') && !voiceName.includes('woman')) ||
+                     (voiceName.includes('microsoft') && !voiceName.includes('female') && !voiceName.includes('woman')))
                 );
-                if (maleVoice) selectedVoice = maleVoice;
-            }
-
-            // 3. Last resort: any English voice
-            if (!selectedVoice) {
-                selectedVoice = voices.find(v => v.lang.startsWith('en'));
-            }
-
-            if (selectedVoice) {
-                currentVoice = selectedVoice;
-                console.log('Voice selected:', currentVoice.name);
+            });
+            
+            if (maleVoices.length > 0) {
+                currentVoice = maleVoices[0];
+                console.log('Selected male voice:', currentVoice.name);
+            } else {
+                // Ultimate fallback: any English voice
+                const englishVoices = voices.filter(voice => voice.lang.startsWith('en-'));
+                if (englishVoices.length > 0) {
+                    currentVoice = englishVoices[0];
+                    console.log('Selected English voice (fallback):', currentVoice.name);
+                } else if (voices.length > 0) {
+                    currentVoice = voices[0];
+                    console.log('Selected first available voice:', currentVoice.name);
+                }
             }
         }
         
@@ -1153,7 +1169,7 @@
             let speedText = 'Normal';
             if (voiceSpeed < 0.9) speedText = 'Slow';
             if (voiceSpeed > 1.1) speedText = 'Fast';
-            voiceSpeedValue.textContent = `Speed: ${speedText} (${voiceSpeed.toFixed(2)}x)`;
+            voiceSpeedValue.textContent = `Speed: ${speedText} (${voiceSpeed.toFixed(1)}x)`;
         }
         
         // Update voice pitch display
@@ -1176,11 +1192,7 @@
             statusIndicator.textContent = 'Listening... Release to send';
             micIcon.className = 'fas fa-microphone';
             
-            // Stop any current speech
-            if ('speechSynthesis' in window) {
-                speechSynthesis.cancel();
-            }
-
+            // Start speech recognition
             try {
                 recognition.start();
             } catch (error) {
@@ -1203,6 +1215,7 @@
             statusIndicator.textContent = 'Ready to send. Tap to send or hold to record again';
             micIcon.className = 'fas fa-paper-plane';
             
+            // Stop speech recognition
             if (recognition) {
                 try {
                     recognition.stop();
@@ -1298,18 +1311,74 @@
             chatContainer.appendChild(messageDiv);
             chatContainer.scrollTop = chatContainer.scrollHeight;
             
-            // Speak the bot's response
-            // MODIFICATION: Add the correction to the speech audio
-            let textToSpeak = content;
+            // Speak the bot's response with correction if applicable
             if (correction) {
-                textToSpeak = `Instead of saying "${correction.error}", try saying "${correction.correction}". ${content}`;
+                // Speak correction first, then continue with conversation
+                speakCorrectionAndResponse(correction, content);
+            } else {
+                speakText(content);
             }
-            
-            speakText(textToSpeak);
+        }
+        
+        // NEW: Speak correction first, then the response
+        function speakCorrectionAndResponse(correction, response) {
+            if ('speechSynthesis' in window) {
+                // Cancel any ongoing speech
+                speechSynthesis.cancel();
+                
+                // Create correction text
+                const correctionText = `I noticed a small mistake. Instead of saying "${correction.error}", you should say "${correction.correction}". Now, ${response}`;
+                
+                // Split correction text into sentences for natural pacing
+                const sentences = correctionText.match(/[^\.!\?]+[\.!\?]+/g) || [correctionText];
+                let currentIndex = 0;
+                
+                // Function to speak the next sentence
+                function speakNextSentence() {
+                    if (currentIndex >= sentences.length) return;
+                    
+                    const sentence = sentences[currentIndex].trim();
+                    if (!sentence) {
+                        currentIndex++;
+                        speakNextSentence();
+                        return;
+                    }
+                    
+                    const utterance = new SpeechSynthesisUtterance(sentence);
+                    utterance.lang = 'en-US';
+                    
+                    // Adjust parameters for more natural male voice
+                    utterance.rate = voiceSpeed;
+                    utterance.pitch = voicePitch; // Lower pitch for masculine voice
+                    utterance.volume = 1;
+                    
+                    // Use the selected male voice if available
+                    if (currentVoice) {
+                        utterance.voice = currentVoice;
+                    }
+                    
+                    // Add slight variation to make it less robotic
+                    utterance.rate = voiceSpeed + (Math.random() * 0.1 - 0.05); // Small random variation
+                    
+                    // Add natural pauses between sentences
+                    utterance.onend = () => {
+                        currentIndex++;
+                        // Add a natural pause between sentences (shorter pause for commas, longer for periods)
+                        const pause = sentence.match(/[\.!\?]$/) ? 400 : 200;
+                        setTimeout(speakNextSentence, pause);
+                    };
+                    
+                    // Speak the sentence
+                    speechSynthesis.speak(utterance);
+                }
+                
+                // Start speaking
+                speakNextSentence();
+            }
         }
         
         // Process user input and get bot response
-        async function processUserInput(userText) {
+        function processUserInput(userText) {
             if (!userText.trim()) {
                 resetRecordingState();
                 return;
@@ -1321,140 +1390,287 @@
             // Check for errors and get corrections
             const correction = checkForErrors(userText);
             
-            // Determine if we should give a recommendation
+            // Determine if we should give a recommendation (every 3-5 messages)
             const shouldGiveRecommendation = messageCount > 0 && 
                                            (messageCount % Math.floor(Math.random() * 3 + 3) === 0);
             
+            // Get a recommendation if needed
             const recommendation = shouldGiveRecommendation ? getNaturalExpressionTip() : null;
             
             // Generate a response based on the user's input
-            let responseText = "";
+            const response = generateBotResponse(userText, correction, recommendation);
             
-            if (apiKey) {
-                try {
-                    // Call Gemini API if key is present
-                    responseText = await callGeminiAPI(userText);
-                } catch (error) {
-                    console.error("Gemini API Error:", error);
-                    responseText = generateFallbackResponse(userText);
-                }
-            } else {
-                responseText = generateFallbackResponse(userText);
-            }
-            
-            // Add the bot's response after a short delay
-            if (!apiKey) {
-                 setTimeout(() => {
-                    addBotMessage(responseText, correction, recommendation);
-                    statusIndicator.textContent = 'Press and hold to speak';
-                }, 800);
-            } else {
-                addBotMessage(responseText, correction, recommendation);
+            // Add the bot's response after a short delay to simulate typing
+            setTimeout(() => {
+                addBotMessage(response, correction, recommendation);
                 statusIndicator.textContent = 'Press and hold to speak';
-            }
-        }
-
-        async function callGeminiAPI(text) {
-             const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
-             
-             const requestBody = {
-                contents: [{
-                    parts: [{
-                        text: `You are Professor Sterling, an English tutor. Reply to this student naturally, keeping it relatively short (2-3 sentences max) to encourage conversation. Input: "${text}"`
-                    }]
-                }]
-             };
-
-             const response = await fetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(requestBody)
-             });
-
-             const data = await response.json();
-             return data.candidates[0].content.parts[0].text;
-        }
-
-        // Fallback response generator (Client side logic)
-        function generateFallbackResponse(userText, correction, recommendation) {
-            const lowerText = userText.toLowerCase();
-            
-            // Greetings
-            if (lowerText.includes('hello') || lowerText.includes('hi') || lowerText.includes('hey')) {
-                return `Hello ${userName}! How are you doing today? I'm here to help you practice.`;
-            }
-            
-            // How are you
-            if (lowerText.includes('how are you')) {
-                return "I'm doing well, thank you! I'm always ready to help you learn English. How about you?";
-            }
-
-            // Default
-            const encouragements = [
-                `Thanks for sharing that, ${userName}.`,
-                `That's interesting!`,
-                `I see what you mean.`,
-                `Good job expressing yourself!`
-            ];
-            
-            const randomEncouragement = encouragements[Math.floor(Math.random() * encouragements.length)];
-            return `${randomEncouragement} Can you tell me more about that?`;
+            }, 800);
         }
         
-        // Check for common English errors in user text - EXPANDED LIST
+        // Check for common English errors in user text
         function checkForErrors(text) {
             const errorPatterns = [
-                { pattern: /\bgender\b.*\bmusic\b/i, error: "gender of music", correction: "genre of music" },
-                { pattern: /\bi have went\b/i, error: "I have went", correction: "I have gone" },
-                { pattern: /\bshe don't\b/i, error: "she don't", correction: "she doesn't" },
-                { pattern: /\bhe don't\b/i, error: "he don't", correction: "he doesn't" },
-                { pattern: /\bit don't\b/i, error: "it don't", correction: "it doesn't" },
-                { pattern: /\bmore better\b/i, error: "more better", correction: "better" },
-                { pattern: /\bi am agree\b/i, error: "I am agree", correction: "I agree" },
-                { pattern: /\bfor explain\b/i, error: "for explain", correction: "to explain" },
-                { pattern: /\bpeople is\b/i, error: "people is", correction: "people are" },
-                { pattern: /\bi has\b/i, error: "I has", correction: "I have" },
-                { pattern: /\byou is\b/i, error: "you is", correction: "you are" }
+                { 
+                    pattern: /\bgender\b.*\bmusic\b/i, 
+                    error: "gender of music",
+                    correction: "genre of music"
+                },
+                { 
+                    pattern: /\bi enjoyed\b.*\bit because that\b/i, 
+                    error: "I enjoyed it because that",
+                    correction: "I enjoy it because the"
+                },
+                { 
+                    pattern: /\bi have went\b/i, 
+                    error: "I have went",
+                    correction: "I have gone"
+                },
+                { 
+                    pattern: /\bshe don't\b/i, 
+                    error: "she don't",
+                    correction: "she doesn't"
+                },
+                { 
+                    pattern: /\bmore better\b/i, 
+                    error: "more better",
+                    correction: "better"
+                },
+                { 
+                    pattern: /\bgooder\b/i, 
+                    error: "gooder",
+                    correction: "better"
+                },
+                { 
+                    pattern: /\bi am agree\b/i, 
+                    error: "I am agree",
+                    correction: "I agree"
+                },
+                { 
+                    pattern: /\bfor explain\b/i, 
+                    error: "for explain",
+                    correction: "to explain"
+                },
+                { 
+                    pattern: /\bi can to go\b/i, 
+                    error: "I can to go",
+                    correction: "I can go"
+                },
+                { 
+                    pattern: /\bmuch more better\b/i, 
+                    error: "much more better",
+                    correction: "much better"
+                },
+                { 
+                    pattern: /\bless better\b/i, 
+                    error: "less better",
+                    correction: "worse"
+                },
+                { 
+                    pattern: /\bi am thinking\b.*\bmaybe i will go\b/i, 
+                    error: "I am thinking maybe I will go",
+                    correction: "I think I might go"
+                },
+                { 
+                    pattern: /\bi have\s+\d+\s+years\b/i, 
+                    error: "I have X years",
+                    correction: "I am X years old"
+                },
+                { 
+                    pattern: /\bmore easy\b/i, 
+                    error: "more easy",
+                    correction: "easier"
+                },
+                { 
+                    pattern: /\bmost easy\b/i, 
+                    error: "most easy",
+                    correction: "easiest"
+                }
             ];
             
             for (const pattern of errorPatterns) {
                 if (pattern.pattern.test(text)) {
-                    // Extract exact match for better error display
-                    const match = text.match(pattern.pattern);
-                    const specificError = match ? match[0] : pattern.error;
-                    return { error: specificError, correction: pattern.correction };
+                    // Extract the actual error from the text
+                    const match = text.match(new RegExp(pattern.pattern.source, 'i'));
+                    const actualError = match ? match[0] : pattern.error;
+                    
+                    return {
+                        error: actualError,
+                        correction: pattern.correction
+                    };
                 }
             }
+            
+            // Check for subject-verb agreement errors
+            const subjectVerbPatterns = [
+                { pattern: /\bhe don't\b/i, correction: "he doesn't" },
+                { pattern: /\bshe don't\b/i, correction: "she doesn't" },
+                { pattern: /\bit don't\b/i, correction: "it doesn't" },
+                { pattern: /\bhe have\b/i, correction: "he has" },
+                { pattern: /\bshe have\b/i, correction: "she has" },
+                { pattern: /\bit have\b/i, correction: "it has" }
+            ];
+            
+            for (const pattern of subjectVerbPatterns) {
+                if (pattern.pattern.test(text)) {
+                    const error = pattern.pattern.exec(text)[0];
+                    return {
+                        error: error,
+                        correction: pattern.correction
+                    };
+                }
+            }
+            
+            // Check for article errors
+            const articlePatterns = [
+                { pattern: /\ba university\b/i, correction: "a university" }, // This is actually correct
+                { pattern: /\ban university\b/i, correction: "a university" },
+                { pattern: /\ba hour\b/i, correction: "an hour" },
+                { pattern: /\ban hour\b/i, correction: "an hour" } // This is actually correct
+            ];
+            
+            for (const pattern of articlePatterns) {
+                if (pattern.pattern.test(text)) {
+                    const error = pattern.pattern.exec(text)[0];
+                    return {
+                        error: error,
+                        correction: pattern.correction
+                    };
+                }
+            }
+            
             return null;
         }
         
+        // Generate natural expression tips
         function getNaturalExpressionTip() {
             const tips = [
-                "Instead of 'I think that...', say 'I reckon...' or 'I believe...'",
-                "Try saying 'awesome' or 'fantastic' instead of just 'very good'.",
-                "Native speakers often use 'gonna' (going to) and 'wanna' (want to) in casual speech.",
-                "Use 'actually' to politely correct someone or clarify a point."
+                "Instead of 'I think that...', native speakers often say 'I reckon...' or 'I believe...'",
+                "A more natural way to say 'very good' is 'awesome', 'fantastic', or 'brilliant'",
+                "Instead of 'I don't know', you can say 'I'm not sure' or 'I have no idea'",
+                "Native speakers often use contractions like 'gonna' for 'going to' and 'wanna' for 'want to' in informal speech",
+                "Instead of 'very tired', say 'exhausted' or 'worn out' for more natural English",
+                "Use 'kind of' or 'sort of' instead of 'a little' for a more natural sound",
+                "Instead of 'I need to...', you can say 'I gotta...' in informal conversations",
+                "A common expression for agreement is 'You can say that again!' instead of just 'I agree'",
+                "Instead of 'very happy', try 'thrilled', 'delighted', or 'over the moon'",
+                "Use 'actually' to correct yourself or others politely: 'Actually, I think...'"
             ];
+            
             return tips[Math.floor(Math.random() * tips.length)];
         }
         
-        // IMPROVED: Speak text with better flow and less robotic timing
+        // Generate bot response based on user input
+        function generateBotResponse(userText, correction, recommendation) {
+            const lowerText = userText.toLowerCase();
+            
+            // Greetings
+            if (lowerText.includes('hello') || lowerText.includes('hi') || lowerText.includes('hey')) {
+                return `Hello ${userName}! How are you doing today? I'm here to help you practice your English.`;
+            }
+            
+            // How are you
+            if (lowerText.includes('how are you')) {
+                return "I'm doing well, thank you for asking! I'm always ready to help you learn English. How about you?";
+            }
+            
+            // Music
+            if (lowerText.includes('music') || lowerText.includes('song') || lowerText.includes('genre')) {
+                return "Music is a great topic! I enjoy classical music myself, but I also appreciate good pop and rock songs. What specific artists or bands do you like?";
+            }
+            
+            // Favorite
+            if (lowerText.includes('favorite') || lowerText.includes('favourite')) {
+                return "That's interesting! I'm glad you shared that with me. Could you tell me more about why you like it?";
+            }
+            
+            // Thank you
+            if (lowerText.includes('thank you') || lowerText.includes('thanks')) {
+                return "You're very welcome! I'm happy to help you improve your English skills.";
+            }
+            
+            // Goodbye
+            if (lowerText.includes('bye') || lowerText.includes('goodbye') || lowerText.includes('see you')) {
+                return "Goodbye! It was great practicing English with you. Come back anytime you want to practice more!";
+            }
+            
+            // Weather
+            if (lowerText.includes('weather')) {
+                return "The weather is a common conversation topic in English. People often say things like 'Lovely day, isn't it?' or 'Bit chilly today!' to start conversations.";
+            }
+            
+            // Food
+            if (lowerText.includes('food') || lowerText.includes('eat') || lowerText.includes('restaurant')) {
+                return "Food is one of my favorite topics! In English, people might say 'I'm starving' instead of 'I'm very hungry', or 'That looks delicious' when they see good food.";
+            }
+            
+            // Default response with encouragement
+            const encouragements = [
+                `Thanks for sharing that, ${userName}. I appreciate you practicing English with me.`,
+                `That's interesting, ${userName}. Keep practicing and you'll keep improving!`,
+                `Great effort, ${userName}! The more you practice, the more natural your English will sound.`,
+                `Good job expressing yourself, ${userName}! Let's keep the conversation going.`
+            ];
+            
+            const randomEncouragement = encouragements[Math.floor(Math.random() * encouragements.length)];
+            
+            if (correction) {
+                return `${randomEncouragement} Don't worry about mistakes - they're a normal part of learning!`;
+            }
+            
+            return `${randomEncouragement} Can you tell me more about your day or interests?`;
+        }
+        
+        // Text-to-speech function with male voice
         function speakText(text) {
             if ('speechSynthesis' in window) {
-                speechSynthesis.cancel(); // Stop previous speech
+                // Cancel any ongoing speech
+                speechSynthesis.cancel();
                 
-                const utterance = new SpeechSynthesisUtterance(text);
+                // Split text into sentences for natural pacing
+                const sentences = text.match(/[^\.!\?]+[\.!\?]+/g) || [text];
+                let currentIndex = 0;
                 
-                utterance.lang = 'en-US';
-                utterance.rate = voiceSpeed; // 1.05 is usually better for male voices
-                utterance.pitch = voicePitch; // 0.9 is deeper/more masculine
-                utterance.volume = 1;
-                
-                if (currentVoice) {
-                    utterance.voice = currentVoice;
+                // Function to speak the next sentence
+                function speakNextSentence() {
+                    if (currentIndex >= sentences.length) return;
+                    
+                    const sentence = sentences[currentIndex].trim();
+                    if (!sentence) {
+                        currentIndex++;
+                        speakNextSentence();
+                        return;
+                    }
+                    
+                    const utterance = new SpeechSynthesisUtterance(sentence);
+                    utterance.lang = 'en-US';
+                    
+                    // Adjust parameters for more natural male voice
+                    utterance.rate = voiceSpeed;
+                    utterance.pitch = voicePitch; // Lower pitch for masculine voice
+                    utterance.volume = 1;
+                    
+                    // Use the selected male voice if available
+                    if (currentVoice) {
+                        utterance.voice = currentVoice;
+                    }
+                    
+                    // Add slight variation to make it less robotic
+                    utterance.rate = voiceSpeed + (Math.random() * 0.1 - 0.05); // Small random variation
+                    
+                    // Add natural pauses between sentences
+                    utterance.onend = () => {
+                        currentIndex++;
+                        // Add a natural pause between sentences (shorter pause for commas, longer for periods)
+                        const pause = sentence.match(/[\.!\?]$/) ? 400 : 200;
+                        setTimeout(speakNextSentence, pause);
+                    };
+                    
+                    // Speak the sentence
+                    speechSynthesis.speak(utterance);
                 }
                 
-                speechSynthesis.speak(utterance);
+                // Start speaking
+                speakNextSentence();
             }
         }
         
@@ -1464,35 +1680,55 @@
             button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
             button.disabled = true;
             
+            // Simulate translation API call
             setTimeout(() => {
                 button.innerHTML = '<i class="fas fa-language"></i>';
                 button.disabled = false;
-                showNotification(`Translated: "${text.substring(0, 40)}..."`);
+                
+                // Show a temporary notification
+                showNotification(`Translated to Spanish: "${text.substring(0, 40)}${text.length > 40 ? '...' : ''}"`);
             }, 800);
         }
         
         // Show notification
         function showNotification(message) {
+            // Remove existing notification if present
             const existingNotification = document.querySelector('.temp-notification');
-            if (existingNotification) existingNotification.remove();
+            if (existingNotification) {
+                existingNotification.remove();
+            }
             
             const notification = document.createElement('div');
             notification.textContent = message;
             notification.className = 'temp-notification';
             notification.style.cssText = `
-                position: fixed; bottom: 120px; left: 50%; transform: translateX(-50%);
-                background: var(--primary); color: white; padding: 10px 15px;
-                border-radius: var(--radius-md); z-index: 1000; max-width: 80%;
-                text-align: center; box-shadow: var(--shadow-lg); font-weight: 500;
-                font-size: 0.85rem; word-wrap: break-word;
+                position: fixed;
+                bottom: 120px;
+                left: 50%;
+                transform: translateX(-50%);
+                background: var(--primary);
+                color: white;
+                padding: 10px 15px;
+                border-radius: var(--radius-md);
+                z-index: 1000;
+                max-width: 80%;
+                text-align: center;
+                box-shadow: var(--shadow-lg);
+                font-weight: 500;
+                font-size: 0.85rem;
+                word-wrap: break-word;
             `;
             
             document.body.appendChild(notification);
+            
             setTimeout(() => {
-                if (notification.parentNode) document.body.removeChild(notification);
+                if (notification.parentNode) {
+                    document.body.removeChild(notification);
+                }
             }, 3000);
         }
         
+        // Utility functions
         function escapeHtml(text) {
             const div = document.createElement('div');
             div.textContent = text;
@@ -1504,41 +1740,69 @@
         }
         
         // Event Listeners
-        const handleInteractionStart = (e) => {
+        micBtn.addEventListener('mousedown', (e) => {
             e.preventDefault();
-            if (!isSendMode) startRecording();
-        };
-
-        const handleInteractionEnd = (e) => {
+            if (!isSendMode) {
+                startRecording();
+            }
+        });
+        
+        micBtn.addEventListener('mouseup', (e) => {
             e.preventDefault();
             if (isRecording && !isSendMode) {
                 stopRecording();
             } else if (isSendMode) {
                 const lastUserMessage = document.querySelector('.user-message:last-child .user-text');
-                if (lastUserMessage) processUserInput(lastUserMessage.textContent);
-                else resetRecordingState();
+                if (lastUserMessage) {
+                    processUserInput(lastUserMessage.textContent);
+                } else {
+                    resetRecordingState();
+                }
             }
-        };
-
-        micBtn.addEventListener('mousedown', handleInteractionStart);
-        micBtn.addEventListener('mouseup', handleInteractionEnd);
-        micBtn.addEventListener('touchstart', handleInteractionStart);
-        micBtn.addEventListener('touchend', handleInteractionEnd);
+        });
         
-        // Voice settings listeners
+        // For touch devices
+        micBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if (!isSendMode) {
+                startRecording();
+            }
+        });
+        
+        micBtn.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            if (isRecording && !isSendMode) {
+                stopRecording();
+            } else if (isSendMode) {
+                const lastUserMessage = document.querySelector('.user-message:last-child .user-text');
+                if (lastUserMessage) {
+                    processUserInput(lastUserMessage.textContent);
+                } else {
+                    resetRecordingState();
+                }
+            }
+        });
+        
+        // Voice speed input
         voiceSpeedInput.addEventListener('input', () => {
             voiceSpeed = parseFloat(voiceSpeedInput.value);
             updateVoiceSpeedValue();
         });
         
+        // Voice pitch input
         voicePitchInput.addEventListener('input', () => {
             voicePitch = parseFloat(voicePitchInput.value);
             updateVoicePitchValue();
         });
         
         // Settings modal
-        settingsBtn.addEventListener('click', () => modalOverlay.classList.add('active'));
-        closeModal.addEventListener('click', () => modalOverlay.classList.remove('active'));
+        settingsBtn.addEventListener('click', () => {
+            modalOverlay.classList.add('active');
+        });
+        
+        closeModal.addEventListener('click', () => {
+            modalOverlay.classList.remove('active');
+        });
         
         saveSettings.addEventListener('click', () => {
             apiKey = apiKeyInput.value.trim();
@@ -1546,6 +1810,7 @@
             voiceSpeed = parseFloat(voiceSpeedInput.value);
             voicePitch = parseFloat(voicePitchInput.value);
             
+            // Save to localStorage
             localStorage.setItem('geminiApiKey', apiKey);
             localStorage.setItem('userName', userName);
             localStorage.setItem('voiceSpeed', voiceSpeed);
@@ -1554,26 +1819,88 @@
             updateVoiceSpeedValue();
             updateVoicePitchValue();
             modalOverlay.classList.remove('active');
+            
+            // Show confirmation
             showNotification('Settings saved successfully!');
         });
         
+        // Close modal when clicking outside
         modalOverlay.addEventListener('click', (e) => {
-            if (e.target === modalOverlay) modalOverlay.classList.remove('active');
+            if (e.target === modalOverlay) {
+                modalOverlay.classList.remove('active');
+            }
         });
         
+        // Handle escape key to close modal
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && modalOverlay.classList.contains('active')) {
+                modalOverlay.classList.remove('active');
+            }
+        });
+        
+        // Initialize the app
         function initApp() {
             initFromStorage();
+            
+            // Ajustar el padding del chat container para que no quede oculto detrás del botón
             adjustChatContainerPadding();
+            
+            // Asegurarse de que el botón de micrófono sea visible
+            ensureMicButtonVisibility();
         }
         
+        // Adjust chat container padding based on button position
         function adjustChatContainerPadding() {
-            const inputAreaHeight = document.querySelector('.input-area').offsetHeight;
+            const inputArea = document.querySelector('.input-area');
+            const inputAreaHeight = inputArea.offsetHeight;
             chatContainer.style.paddingBottom = `${inputAreaHeight + 20}px`;
         }
         
+        // Ensure mic button is visible
+        function ensureMicButtonVisibility() {
+            const micBtn = document.getElementById('micBtn');
+            micBtn.style.visibility = 'visible';
+            micBtn.style.opacity = '1';
+        }
+        
+        // Initialize the app when page loads
         window.addEventListener('DOMContentLoaded', initApp);
+        
+        // Adjust padding on window resize
         window.addEventListener('resize', adjustChatContainerPadding);
+        
+        // Prevent context menu on long press for mobile
+        document.addEventListener('contextmenu', (e) => {
+            if (e.target === micBtn) {
+                e.preventDefault();
+            }
+        });
+        
+        // Handle page visibility changes
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden && isRecording) {
+                stopRecording();
+            }
+        });
+        
+        // Expose functions to global scope for onclick handlers
         window.translateMessage = translateMessage;
+        
+        // Demo conversation after page loads
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                // Demo: User makes a common error
+                addUserMessage("my favorite gender of music is rock and I enjoyed it because that songs have good lyrics");
+                
+                setTimeout(() => {
+                    const correction = {
+                        error: "gender of music",
+                        correction: "genre of music"
+                    };
+                    addBotMessage("Rock music is a great choice! I also enjoy rock because of the meaningful lyrics. What's your favorite rock band?", correction);
+                }, 1000);
+            }, 2000);
+        });
     </script>
 </body>
 </html>
