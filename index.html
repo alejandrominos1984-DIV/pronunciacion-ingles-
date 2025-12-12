@@ -3,794 +3,608 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VoiceBot English Professor</title>
+    <title>Prof. Alex - AI English Tutor</title>
+    <!-- Tailwind CSS para diseño moderno -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome para iconos -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        primary: '#2563EB', // Azul moderno
+                        secondary: '#F3F4F6',
+                        success: '#10B981',
+                        error: '#EF4444',
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'wave': 'wave 1.2s ease-in-out infinite',
+                    },
+                    keyframes: {
+                        wave: {
+                            '0%, 100%': { height: '10px' },
+                            '50%': { height: '24px' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Segoe UI', system-ui, sans-serif;
-        }
-
+        /* Estilos personalizados para scrollbar y detalles finos */
         body {
-            background: linear-gradient(135deg, #1a237e 0%, #311b92 100%);
-            color: #333;
-            min-height: 100vh;
-            padding: 20px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-
-        .container {
-            width: 100%;
-            max-width: 500px;
-            background-color: #fff;
-            border-radius: 20px;
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
-            overflow: hidden;
-            height: 90vh;
+            background-color: #ffffff;
+            height: 100vh;
             display: flex;
             flex-direction: column;
-        }
-
-        .header {
-            background: linear-gradient(to right, #5c6bc0, #3949ab);
-            color: white;
-            padding: 20px;
-            display: flex;
-            align-items: center;
-            position: relative;
-            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
-        }
-
-        .bot-avatar {
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
             overflow: hidden;
-            margin-right: 15px;
-            border: 3px solid rgba(255, 255, 255, 0.5);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            background-color: #7986cb;
         }
-
-        .bot-avatar img {
-            width: 70%;
-            height: 70%;
-            object-fit: contain;
-            filter: brightness(0) invert(1);
-        }
-
-        .bot-info h1 {
-            font-size: 1.5rem;
-            margin-bottom: 5px;
-            font-weight: 600;
-        }
-
-        .bot-info p {
-            font-size: 0.9rem;
-            opacity: 0.9;
-        }
-
-        .settings-btn {
-            position: absolute;
-            right: 20px;
-            top: 20px;
-            background: transparent;
-            border: none;
-            color: white;
-            font-size: 1.5rem;
-            cursor: pointer;
-            transition: transform 0.3s;
-        }
-
-        .settings-btn:hover {
-            transform: rotate(30deg);
-        }
-
+        
         .chat-container {
             flex: 1;
             overflow-y: auto;
-            padding: 20px;
-            background-color: #f5f5f5;
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
+            scroll-behavior: smooth;
+            padding-bottom: 140px; /* Espacio aumentado para el footer más alto */
         }
 
-        .message {
-            max-width: 80%;
-            padding: 15px;
-            border-radius: 18px;
-            position: relative;
-            line-height: 1.4;
-            word-break: break-word;
+        .chat-container::-webkit-scrollbar {
+            width: 6px;
+        }
+        .chat-container::-webkit-scrollbar-thumb {
+            background-color: #E5E7EB;
+            border-radius: 3px;
         }
 
-        .bot-message {
-            background-color: #e8eaf6;
-            align-self: flex-start;
-            border-bottom-left-radius: 5px;
-            margin-right: auto;
-        }
-
-        .user-message {
-            background-color: #3949ab;
-            color: white;
-            align-self: flex-end;
-            border-bottom-right-radius: 5px;
-            margin-left: auto;
-        }
-
-        .error-correction {
-            background-color: #ffebee;
-            border-left: 4px solid #f44336;
-            padding: 10px 15px;
-            margin-bottom: 5px;
-            border-radius: 8px;
-            font-size: 0.9rem;
-        }
-
-        .error-text {
-            color: #d32f2f;
-            font-weight: 600;
-        }
-
-        .correction-text {
-            color: #388e3c;
-            font-weight: 600;
-        }
-
-        .message-time {
-            font-size: 0.7rem;
-            opacity: 0.7;
-            margin-top: 5px;
-            text-align: right;
-        }
-
-        .translation-icon {
-            position: absolute;
-            bottom: -12px;
-            right: 10px;
-            font-size: 1rem;
-            background: white;
-            border-radius: 50%;
-            width: 24px;
-            height: 24px;
+        /* Animación de ondas de sonido */
+        .sound-wave-container {
             display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-            color: #3949ab;
-        }
-
-        .voice-controls {
-            padding: 20px;
-            background-color: white;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 15px;
-            border-top: 1px solid #eee;
-        }
-
-        .mic-button {
-            width: 70px;
-            height: 70px;
-            border-radius: 50%;
-            background: linear-gradient(to bottom, #5c6bc0, #3949ab);
-            border: none;
-            color: white;
-            font-size: 1.8rem;
-            cursor: pointer;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            box-shadow: 0 5px 15px rgba(57, 73, 171, 0.4);
-            transition: all 0.3s;
-        }
-
-        .mic-button:hover {
-            transform: scale(1.05);
-        }
-
-        .mic-button.listening {
-            background: linear-gradient(to bottom, #f44336, #d32f2f);
-            animation: pulse 1.5s infinite;
-        }
-
-        @keyframes pulse {
-            0% { box-shadow: 0 0 0 0 rgba(244, 67, 54, 0.7); }
-            70% { box-shadow: 0 0 0 15px rgba(244, 67, 54, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(244, 67, 54, 0); }
-        }
-
-        .sound-wave {
-            display: flex;
             gap: 4px;
             height: 30px;
-            align-items: center;
-            justify-content: center;
-            margin-bottom: 10px;
+            opacity: 0;
+            transition: opacity 0.3s;
         }
-
+        .sound-wave-container.active {
+            opacity: 1;
+        }
         .bar {
             width: 4px;
-            background-color: #3949ab;
+            background-color: #10B981; /* Verde cuando graba */
             border-radius: 2px;
-            animation: sound-wave 1.5s ease infinite alternate;
+            animation: wave 1s ease-in-out infinite;
         }
+        .bar:nth-child(2) { animation-delay: 0.1s; }
+        .bar:nth-child(3) { animation-delay: 0.2s; }
+        .bar:nth-child(4) { animation-delay: 0.3s; }
+        .bar:nth-child(5) { animation-delay: 0.4s; }
 
-        .bar:nth-child(2) { animation-delay: 0.2s; }
-        .bar:nth-child(3) { animation-delay: 0.4s; }
-        .bar:nth-child(4) { animation-delay: 0.6s; }
-        .bar:nth-child(5) { animation-delay: 0.8s; }
-
-        @keyframes sound-wave {
-            0% { height: 5px; }
-            100% { height: 25px; }
+        /* Botón de micrófono pulsante */
+        .mic-button-shadow {
+            box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+            animation: pulse-green 2s infinite;
         }
-
-        .instructions {
-            font-size: 0.9rem;
-            color: #666;
-            text-align: center;
-            max-width: 80%;
-        }
-
-        .settings-modal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.7);
-            display: none;
-            justify-content: center;
-            align-items: center;
-            z-index: 100;
-        }
-
-        .settings-content {
-            background-color: white;
-            border-radius: 15px;
-            padding: 30px;
-            width: 90%;
-            max-width: 450px;
-            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.3);
-        }
-
-        .settings-content h2 {
-            margin-bottom: 20px;
-            color: #3949ab;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .settings-content label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 600;
-            color: #555;
-        }
-
-        .settings-content input {
-            width: 100%;
-            padding: 12px 15px;
-            margin-bottom: 20px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            font-size: 1rem;
-        }
-
-        .settings-buttons {
-            display: flex;
-            justify-content: flex-end;
-            gap: 15px;
-            margin-top: 25px;
-        }
-
-        .btn {
-            padding: 10px 20px;
-            border-radius: 8px;
-            border: none;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-
-        .btn-primary {
-            background-color: #3949ab;
-            color: white;
-        }
-
-        .btn-secondary {
-            background-color: #e0e0e0;
-            color: #333;
-        }
-
-        .btn:hover {
-            opacity: 0.9;
-            transform: translateY(-2px);
-        }
-
-        .status-indicator {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 0.85rem;
-            color: #666;
-            margin-top: 10px;
-        }
-
-        .status-dot {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            background-color: #ccc;
-        }
-
-        .status-dot.active {
-            background-color: #4caf50;
-            animation: blink 2s infinite;
-        }
-
-        @keyframes blink {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-
-        @media (max-width: 768px) {
-            .container {
-                height: 95vh;
-                border-radius: 15px;
-            }
-            
-            .header {
-                padding: 15px;
-            }
-            
-            .bot-avatar {
-                width: 50px;
-                height: 50px;
-            }
+        @keyframes pulse-green {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 20px rgba(16, 185, 129, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
         }
     </style>
 </head>
-<body>
-    <div class="container">
-        <div class="header">
-            <div class="bot-avatar">
-                <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E" alt="Bot Avatar">
+<body class="text-gray-800">
+
+    <!-- Header -->
+    <header class="bg-white border-b border-gray-100 p-4 flex items-center justify-between sticky top-0 z-10 shadow-sm">
+        <div class="flex items-center gap-3">
+            <div class="relative">
+                <img src="https://randomuser.me/api/portraits/men/32.jpg" alt="Prof. Alex" class="w-12 h-12 rounded-full object-cover border-2 border-white shadow-md">
+                <div class="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></div>
             </div>
-            <div class="bot-info">
-                <h1>Profesora Clara</h1>
-                <p>Tu profesor de inglés conversacional</p>
+            <div>
+                <h1 class="font-bold text-lg text-gray-900 leading-tight">Prof. Alex</h1>
+                <p class="text-xs text-blue-600 font-medium">AI English Tutor</p>
             </div>
-            <button class="settings-btn" id="settingsBtn">
-                <i class="fas fa-cog"></i>
+        </div>
+        <button id="settingsBtn" class="text-gray-400 hover:text-gray-600 transition p-2">
+            <i class="fa-solid fa-gear text-xl"></i>
+        </button>
+    </header>
+
+    <!-- Chat Area -->
+    <main id="chatArea" class="chat-container p-4 bg-gray-50">
+        <!-- Mensaje de bienvenida -->
+        <div class="flex gap-3 mb-6 animate-fade-in">
+            <img src="https://randomuser.me/api/portraits/men/32.jpg" class="w-8 h-8 rounded-full self-start mt-1">
+            <div class="flex flex-col max-w-[85%]">
+                <div class="bg-white p-4 rounded-2xl rounded-tl-none shadow-sm border border-gray-100 text-gray-700">
+                    <p>Hello! I'm Prof. Alex. Tap the microphone to start speaking. Take your time, and tap the Send button when you are done.</p>
+                </div>
+                <!-- Botón de traducción -->
+                <button onclick="translateText('Hello! I\'m Prof. Alex...')" class="self-end mt-1 text-xs text-gray-400 hover:text-blue-500 flex items-center gap-1 bg-white px-2 py-1 rounded-full border border-gray-100 shadow-sm transition-all">
+                    <i class="fa-solid fa-language"></i> Traducir
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer / Input Area -->
+    <footer class="bg-white p-4 fixed bottom-0 w-full border-t border-gray-100 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] z-20">
+        
+        <!-- Indicador de escucha (Ondas) -->
+        <div id="listeningIndicator" class="absolute -top-10 left-0 w-full flex justify-center sound-wave-container">
+            <div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div>
+        </div>
+
+        <div class="flex flex-col items-center justify-center relative">
+            <!-- Vista previa del texto -->
+            <div id="livePreview" class="w-full text-center mb-4 min-h-[1.5rem] px-4">
+                <p id="statusText" class="text-sm text-gray-400 transition-colors">Toca el micrófono para empezar</p>
+            </div>
+            
+            <button id="micBtn" class="w-16 h-16 bg-blue-600 hover:bg-blue-700 text-white rounded-full flex items-center justify-center transition-all shadow-lg active:scale-95">
+                <i class="fa-solid fa-microphone text-2xl"></i>
             </button>
         </div>
+    </footer>
 
-        <div class="chat-container" id="chatContainer">
-            <!-- Los mensajes aparecerán aquí -->
-            <div class="message bot-message">
-                <div class="error-correction" id="initialCorrection" style="display:none;">
-                    <span class="error-text">Error: </span><span class="correction-text">Corrección: </span>
-                </div>
-                ¡Hola! Soy Clara, tu profesora de inglés personal. Estoy aquí para ayudarte a mejorar tu inglés conversacional. Cada vez que hables, revisaré tu pronunciación y gramática, y te señalaré los errores. ¿De qué te gustaría hablar hoy?
-                <div class="message-time">12:00 PM</div>
-                <div class="translation-icon">
-                    <i class="fas fa-language"></i>
-                </div>
+    <!-- Modal de Configuración (API Key) -->
+    <div id="settingsModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden items-center justify-center z-50">
+        <div class="bg-white rounded-2xl p-6 w-[90%] max-w-md shadow-2xl transform transition-all scale-100">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="font-bold text-lg text-gray-800">Configuración</h3>
+                <button id="closeSettings" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-times"></i></button>
             </div>
-        </div>
+            
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Google Gemini API Key</label>
+                <input type="password" id="apiKeyInput" placeholder="Pega tu API Key aquí..." class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition">
+                <p class="text-xs text-gray-500 mt-2">
+                    Necesitas una API Key gratuita de <a href="https://aistudio.google.com/" target="_blank" class="text-blue-600 underline">Google AI Studio</a>.
+                </p>
+            </div>
 
-        <div class="voice-controls">
-            <div class="sound-wave" id="soundWave" style="display: none;">
-                <div class="bar"></div>
-                <div class="bar"></div>
-                <div class="bar"></div>
-                <div class="bar"></div>
-                <div class="bar"></div>
-            </div>
-            <button class="mic-button" id="micButton">
-                <i class="fas fa-microphone"></i>
-            </button>
-            <div class="instructions" id="instructions">
-                Presiona el micrófono y habla en inglés
-            </div>
-            <div class="status-indicator">
-                <div class="status-dot" id="statusDot"></div>
-                <span id="statusText">Conectando...</span>
-            </div>
-        </div>
-    </div>
-
-    <div class="settings-modal" id="settingsModal">
-        <div class="settings-content">
-            <h2><i class="fas fa-cog"></i> Configuración</h2>
-            <p>Para usar el bot, necesitas una API key de Google Gemini. Consíguela gratis en <a href="https://makersuite.google.com/app/apikey" target="_blank">Google AI Studio</a>.</p>
-            
-            <label for="apiKey">API Key de Gemini:</label>
-            <input type="password" id="apiKey" placeholder="Ingresa tu API key">
-            
-            <label for="voiceSelect">Voz del asistente:</label>
-            <select id="voiceSelect" class="btn" style="width:100%; padding:12px; margin-bottom:20px;">
-                <option value="en-US-Neural2-J">Voz femenina (Estados Unidos)</option>
-                <option value="en-GB-Neural2-A">Voz femenina (Reino Unido)</option>
-                <option value="en-AU-Neural2-A">Voz femenina (Australia)</option>
-            </select>
-            
-            <div class="settings-buttons">
-                <button class="btn btn-secondary" id="closeSettings">Cancelar</button>
-                <button class="btn btn-primary" id="saveSettings">Guardar</button>
-            </div>
+            <button id="saveSettings" class="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition">Guardar</button>
         </div>
     </div>
 
     <script>
-        // Variables globales
-        let isListening = false;
-        let recognition = null;
-        let apiKey = '';
-        let currentVoice = 'en-US-Neural2-J';
-        let conversationHistory = [
-            {
-                role: "user",
-                parts: [{ text: "Eres Clara, una profesora de inglés amable y paciente. Tu objetivo es ayudar a los estudiantes a mejorar su inglés conversacional. Debes responder en inglés, pero si el estudiante comete errores, debes señalarlos en español antes de tu respuesta. Los errores deben incluir correcciones de gramática, vocabulario y pronunciación. Mantén las respuestas breves y conversacionales. Presentate ahora." }]
-            },
-            {
-                role: "model",
-                parts: [{ text: "Hello! I'm Clara, your personal English teacher. I'm here to help you improve your conversational English. Whenever you speak, I'll check your pronunciation and grammar, and I'll point out any mistakes. What would you like to talk about today?" }]
-            }
-        ];
+        // --- Estado de la Aplicación ---
+        const state = {
+            apiKey: localStorage.getItem('gemini_api_key') || '',
+            isRecording: false,      // ¿Estamos en modo grabación?
+            userStopped: false,      // ¿El usuario pulsó detener manualmente?
+            transcriptAccumulator: '', // Acumulador para pausas largas
+            recognition: null,
+            synthesis: window.speechSynthesis,
+            messages: []
+        };
 
-        // Elementos del DOM
-        const micButton = document.getElementById('micButton');
-        const chatContainer = document.getElementById('chatContainer');
-        const soundWave = document.getElementById('soundWave');
-        const instructions = document.getElementById('instructions');
-        const settingsBtn = document.getElementById('settingsBtn');
-        const settingsModal = document.getElementById('settingsModal');
-        const closeSettings = document.getElementById('closeSettings');
-        const saveSettings = document.getElementById('saveSettings');
-        const apiKeyInput = document.getElementById('apiKey');
-        const voiceSelect = document.getElementById('voiceSelect');
-        const statusDot = document.getElementById('statusDot');
-        const statusText = document.getElementById('statusText');
+        // --- Referencias al DOM ---
+        const els = {
+            micBtn: document.getElementById('micBtn'),
+            chatArea: document.getElementById('chatArea'),
+            listeningIndicator: document.getElementById('listeningIndicator'),
+            statusText: document.getElementById('statusText'),
+            settingsBtn: document.getElementById('settingsBtn'),
+            settingsModal: document.getElementById('settingsModal'),
+            closeSettings: document.getElementById('closeSettings'),
+            saveSettings: document.getElementById('saveSettings'),
+            apiKeyInput: document.getElementById('apiKeyInput')
+        };
 
-        // Inicializar la aplicación
-        function initApp() {
-            // Cargar configuraciones guardadas
-            const savedApiKey = localStorage.getItem('englishTeacherApiKey');
-            const savedVoice = localStorage.getItem('englishTeacherVoice');
-            
-            if (savedApiKey) {
-                apiKey = savedApiKey;
-                apiKeyInput.value = savedApiKey;
-            }
-            
-            if (savedVoice) {
-                currentVoice = savedVoice;
-                voiceSelect.value = savedVoice;
-            }
-            
-            updateStatus();
-            
-            // Configurar el reconocimiento de voz
-            setupSpeechRecognition();
-            
-            // Configurar eventos
-            micButton.addEventListener('click', toggleListening);
-            settingsBtn.addEventListener('click', () => settingsModal.style.display = 'flex');
-            closeSettings.addEventListener('click', () => settingsModal.style.display = 'none');
-            saveSettings.addEventListener('click', saveSettingsFunc);
-            
-            // Cerrar modal al hacer clic fuera
-            settingsModal.addEventListener('click', (e) => {
-                if (e.target === settingsModal) {
-                    settingsModal.style.display = 'none';
-                }
-            });
-        }
-
-        // Configurar reconocimiento de voz
-        function setupSpeechRecognition() {
+        // --- Configuración Inicial ---
+        function init() {
+            // Configurar Web Speech API (Reconocimiento)
             if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
                 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-                recognition = new SpeechRecognition();
-                recognition.continuous = false;
-                recognition.interimResults = false;
-                recognition.lang = 'en-US';
-                
-                recognition.onstart = () => {
-                    isListening = true;
-                    micButton.classList.add('listening');
-                    soundWave.style.display = 'flex';
-                    instructions.textContent = 'Escuchando... habla ahora';
-                    updateStatus();
+                state.recognition = new SpeechRecognition();
+                state.recognition.lang = 'en-US';
+                state.recognition.continuous = true; // CLAVE: No detenerse en silencio
+                state.recognition.interimResults = true; // Para mostrar preview
+                state.recognition.maxAlternatives = 1;
+
+                state.recognition.onstart = () => {
+                    // Solo actualizamos UI si realmente estamos en modo grabación lógica
+                    if(state.isRecording) {
+                        updateUIState('recording');
+                    }
+                };
+
+                state.recognition.onend = () => {
+                    // Si el usuario NO lo detuvo (ej. corte del navegador), reiniciamos
+                    if (state.isRecording && !state.userStopped) {
+                        console.log("Reiniciando reconocimiento...");
+                        try {
+                            state.recognition.start();
+                        } catch (e) {
+                            console.log("Error al reiniciar inmediato:", e);
+                        }
+                    } else if (state.userStopped) {
+                        // El usuario detuvo y quiere enviar
+                        updateUIState('processing');
+                        handleFinalSend();
+                    } else {
+                        updateUIState('idle');
+                    }
+                };
+
+                state.recognition.onresult = (event) => {
+                    let interimTranscript = '';
+                    let finalChunk = '';
+
+                    for (let i = event.resultIndex; i < event.results.length; ++i) {
+                        if (event.results[i].isFinal) {
+                            finalChunk += event.results[i][0].transcript;
+                        } else {
+                            interimTranscript += event.results[i][0].transcript;
+                        }
+                    }
+
+                    // Acumulamos lo confirmado
+                    state.transcriptAccumulator += finalChunk;
+                    
+                    // Mostramos preview (Acumulado + Interino)
+                    const display = state.transcriptAccumulator + interimTranscript;
+                    if (display) {
+                        els.statusText.textContent = display;
+                        els.statusText.classList.add('text-gray-800', 'font-medium');
+                        els.statusText.classList.remove('text-gray-400');
+                    }
                 };
                 
-                recognition.onresult = (event) => {
-                    const transcript = event.results[0][0].transcript;
-                    addUserMessage(transcript);
-                    processUserInput(transcript);
+                state.recognition.onerror = (event) => {
+                    console.error('Speech recognition error', event.error);
+                    if (event.error === 'no-speech') {
+                        // Ignorar error de no habla, mantener vivo
+                        return;
+                    }
+                    state.isRecording = false;
+                    updateUIState('idle');
+                    renderSystemMessage("Error de micrófono: " + event.error);
                 };
-                
-                recognition.onerror = (event) => {
-                    console.error('Error en reconocimiento de voz:', event.error);
-                    instructions.textContent = 'Error: ' + event.error;
-                    stopListening();
-                };
-                
-                recognition.onend = () => {
-                    stopListening();
-                };
-                
-                updateStatus();
+
             } else {
-                statusText.textContent = 'Reconocimiento de voz no compatible';
-                micButton.disabled = true;
-                micButton.style.opacity = '0.5';
-                instructions.textContent = 'Tu navegador no soporta reconocimiento de voz';
+                alert("Tu navegador no soporta reconocimiento de voz. Por favor usa Chrome o Edge.");
+                els.micBtn.disabled = true;
             }
+
+            // Pre-llenar API Key si existe
+            if (state.apiKey) els.apiKeyInput.value = state.apiKey;
         }
 
-        // Alternar escucha
-        function toggleListening() {
-            if (!recognition) return;
-            
-            if (isListening) {
-                recognition.stop();
-            } else {
+        // --- Lógica de Envío ---
+        function handleMicClick() {
+            if (!state.isRecording) {
+                // START RECORDING
+                state.isRecording = true;
+                state.userStopped = false;
+                state.transcriptAccumulator = ''; // Limpiar buffer anterior
+                els.statusText.textContent = "Escuchando..."; 
+                
                 try {
-                    recognition.start();
-                } catch (error) {
-                    console.error('Error al iniciar reconocimiento:', error);
-                    instructions.textContent = 'Error al iniciar el micrófono';
+                    state.recognition.start();
+                } catch(e) {
+                    console.error("Error start:", e);
                 }
-            }
-        }
+                updateUIState('recording');
 
-        // Detener escucha
-        function stopListening() {
-            isListening = false;
-            micButton.classList.remove('listening');
-            soundWave.style.display = 'none';
-            instructions.textContent = 'Presiona el micrófono y habla en inglés';
-            updateStatus();
-        }
-
-        // Actualizar estado de conexión
-        function updateStatus() {
-            if (!recognition) {
-                statusDot.className = 'status-dot';
-                statusText.textContent = 'Reconocimiento de voz no disponible';
-                return;
-            }
-            
-            if (apiKey) {
-                statusDot.className = 'status-dot active';
-                statusText.textContent = isListening ? 'Escuchando...' : 'Conectado y listo';
             } else {
-                statusDot.className = 'status-dot';
-                statusText.textContent = 'Configura tu API key para comenzar';
+                // STOP AND SEND
+                state.userStopped = true; // Bandera para que onend sepa que debe enviar
+                state.recognition.stop();
+                // La lógica de envío real ocurre en 'onend' para asegurar que tenemos todo el texto
             }
         }
 
-        // Guardar configuración
-        function saveSettingsFunc() {
-            apiKey = apiKeyInput.value.trim();
-            currentVoice = voiceSelect.value;
+        function handleFinalSend() {
+            const textToSend = state.transcriptAccumulator.trim();
             
-            if (!apiKey) {
-                alert('Por favor ingresa una API key de Gemini');
+            if (!textToSend) {
+                // Si no dijo nada, volver a idle sin enviar
+                updateUIState('idle');
+                els.statusText.textContent = "No se detectó voz. Intenta de nuevo.";
                 return;
             }
-            
-            localStorage.setItem('englishTeacherApiKey', apiKey);
-            localStorage.setItem('englishTeacherVoice', currentVoice);
-            
-            settingsModal.style.display = 'none';
-            updateStatus();
-            
-            // Probar la API key
-            testApiKey();
+
+            handleUserMessage(textToSend);
         }
 
-        // Probar la API key
-        async function testApiKey() {
-            try {
-                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        contents: [{
-                            parts: [{
-                                text: "Responde con 'OK' si estás funcionando correctamente."
-                            }]
-                        }]
-                    })
-                });
+        // --- Manejo de la Interfaz (UI) ---
+        function updateUIState(status) {
+            if (status === 'recording') {
+                els.listeningIndicator.classList.add('active');
                 
-                if (response.ok) {
-                    addBotMessage("Configuración guardada correctamente. ¡Estoy lista para ayudarte con tu inglés!", false);
-                } else {
-                    throw new Error('API key inválida');
+                // Botón se convierte en Enviar (Avión/Verde)
+                els.micBtn.classList.add('mic-button-shadow'); // Sombra verde
+                els.micBtn.classList.remove('bg-blue-600', 'hover:bg-blue-700');
+                els.micBtn.classList.add('bg-green-500', 'hover:bg-green-600');
+                els.micBtn.innerHTML = '<i class="fa-solid fa-paper-plane text-2xl pr-1"></i>'; // Icono enviar
+                
+                // Texto de estado gestionado por onresult, pero backup aquí
+                if(state.transcriptAccumulator === '') {
+                     els.statusText.textContent = "Te escucho... (Pulsa para enviar)";
                 }
-            } catch (error) {
-                alert('Error al conectar con la API. Verifica tu API key.');
-                console.error('Error testing API key:', error);
+
+            } else if (status === 'processing') {
+                els.listeningIndicator.classList.remove('active');
+                els.micBtn.classList.remove('mic-button-shadow');
+                
+                // Botón gris cargando
+                els.micBtn.classList.remove('bg-green-500', 'hover:bg-green-600', 'bg-blue-600');
+                els.micBtn.classList.add('bg-gray-400');
+                els.micBtn.disabled = true;
+                els.micBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-2xl"></i>';
+                
+                els.statusText.textContent = "Thinking...";
+                els.statusText.classList.remove('text-gray-800', 'font-medium');
+                els.statusText.classList.add('text-blue-600');
+
+            } else { // Idle
+                state.isRecording = false;
+                els.listeningIndicator.classList.remove('active');
+                els.micBtn.classList.remove('mic-button-shadow');
+                
+                // Volver a micrófono azul
+                els.micBtn.classList.remove('bg-green-500', 'bg-gray-400', 'hover:bg-green-600');
+                els.micBtn.classList.add('bg-blue-600', 'hover:bg-blue-700');
+                els.micBtn.disabled = false;
+                els.micBtn.innerHTML = '<i class="fa-solid fa-microphone text-2xl"></i>';
+                
+                els.statusText.textContent = "Toca el micrófono para hablar";
+                els.statusText.classList.remove('text-blue-600', 'text-gray-800', 'font-medium');
+                els.statusText.classList.add('text-gray-400');
             }
         }
 
-        // Añadir mensaje del usuario
-        function addUserMessage(text) {
-            const messageDiv = document.createElement('div');
-            messageDiv.className = 'message user-message';
-            
-            const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            
-            messageDiv.innerHTML = `
-                ${text}
-                <div class="message-time">${time}</div>
-            `;
-            
-            chatContainer.appendChild(messageDiv);
-            chatContainer.scrollTop = chatContainer.scrollHeight;
+        function scrollToBottom() {
+            els.chatArea.scrollTop = els.chatArea.scrollHeight;
         }
 
-        // Añadir mensaje del bot
-        function addBotMessage(text, showCorrection = false, correctionText = '') {
-            const messageDiv = document.createElement('div');
-            messageDiv.className = 'message bot-message';
-            
-            const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            
-            let correctionHTML = '';
-            if (showCorrection && correctionText) {
-                const correctionParts = correctionText.split('|');
-                if (correctionParts.length >= 2) {
-                    correctionHTML = `
-                        <div class="error-correction">
-                            <span class="error-text">Error: ${correctionParts[0]}</span><br>
-                            <span class="correction-text">Correction: ${correctionParts[1]}</span>
-                        </div>
-                    `;
-                }
-            }
-            
-            messageDiv.innerHTML = `
-                ${correctionHTML}
-                ${text}
-                <div class="message-time">${time}</div>
-                <div class="translation-icon">
-                    <i class="fas fa-language"></i>
+        // --- Renderizado de Mensajes ---
+        function renderUserMessage(text) {
+            const html = `
+                <div class="flex flex-col items-end mb-6 animate-fade-in">
+                    <div class="bg-blue-600 text-white p-4 rounded-2xl rounded-tr-none shadow-md max-w-[85%] text-left">
+                        <p>${text}</p>
+                    </div>
+                    <button onclick="translateText('${escapeHtml(text)}')" class="mt-1 mr-1 text-xs text-gray-400 hover:text-blue-500 flex items-center gap-1 bg-white px-2 py-1 rounded-full border border-gray-100 shadow-sm transition-all">
+                        <i class="fa-solid fa-language"></i> Traducir
+                    </button>
                 </div>
             `;
-            
-            chatContainer.appendChild(messageDiv);
-            chatContainer.scrollTop = chatContainer.scrollHeight;
-            
-            // Leer el mensaje en voz alta
-            speakText(text);
+            els.chatArea.insertAdjacentHTML('beforeend', html);
+            scrollToBottom();
         }
 
-        // Procesar entrada del usuario
-        async function processUserInput(userText) {
-            if (!apiKey) {
-                addBotMessage("Por favor configura tu API key de Gemini en la configuración (icono del engranaje) para poder ayudarte.", false);
+        function renderBotResponse(data) {
+            let correctionBlock = '';
+
+            if (data.correction && data.correction.hasError) {
+                correctionBlock = `
+                    <div class="bg-white p-4 rounded-xl shadow-sm border-l-4 border-green-500 mb-3 w-full">
+                        <div class="flex items-center gap-2 mb-2">
+                            <i class="fa-solid fa-circle-check text-green-500"></i>
+                            <h4 class="text-xs font-bold text-gray-500 uppercase tracking-wide">Corrección Sugerida:</h4>
+                        </div>
+                        <p class="text-gray-800 text-lg leading-relaxed">
+                            ${data.correction.htmlDisplay}
+                        </p>
+                    </div>
+                `;
+            }
+
+            const html = `
+                <div class="flex gap-3 mb-6 animate-fade-in">
+                    <img src="https://randomuser.me/api/portraits/men/32.jpg" class="w-8 h-8 rounded-full self-start mt-1">
+                    <div class="flex flex-col max-w-[90%]">
+                        
+                        ${correctionBlock}
+
+                        <div class="bg-white p-4 rounded-2xl rounded-tl-none shadow-sm border border-gray-100 text-gray-700">
+                            <p>${data.response}</p>
+                        </div>
+                        
+                        <button onclick="translateText('${escapeHtml(data.response)}')" class="self-end mt-1 text-xs text-gray-400 hover:text-blue-500 flex items-center gap-1 bg-white px-2 py-1 rounded-full border border-gray-100 shadow-sm transition-all">
+                            <i class="fa-solid fa-language"></i> Traducir
+                        </button>
+                    </div>
+                </div>
+            `;
+            els.chatArea.insertAdjacentHTML('beforeend', html);
+            scrollToBottom();
+            
+            // Hablar la respuesta
+            speakText(data.response);
+        }
+
+        // --- Lógica Principal (API de Gemini) ---
+        async function handleUserMessage(text) {
+            renderUserMessage(text);
+            updateUIState('processing');
+
+            if (!state.apiKey) {
+                renderSystemMessage("⚠️ Por favor configura tu API Key en el icono de engranaje.");
+                updateUIState('idle');
                 return;
             }
-            
-            // Añadir el mensaje del usuario al historial
-            conversationHistory.push({
-                role: "user",
-                parts: [{ text: userText }]
-            });
-            
+
             try {
-                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        contents: conversationHistory,
-                        generationConfig: {
-                            temperature: 0.7,
-                            topK: 1,
-                            topP: 1,
-                            maxOutputTokens: 2048,
-                        },
-                    })
-                });
-                
-                if (!response.ok) {
-                    throw new Error(`Error en la API: ${response.status}`);
-                }
-                
-                const data = await response.json();
-                const botResponse = data.candidates[0].content.parts[0].text;
-                
-                // Extraer correcciones si existen (formato especial)
-                let correctionText = '';
-                let cleanResponse = botResponse;
-                
-                // Buscar patrones de corrección en la respuesta
-                if (botResponse.includes('ERROR:')) {
-                    const errorMatch = botResponse.match(/ERROR:(.*?)CORRECTION:(.*?)(?=\n|$)/s);
-                    if (errorMatch) {
-                        correctionText = `${errorMatch[1].trim()}|${errorMatch[2].trim()}`;
-                        cleanResponse = botResponse.replace(/ERROR:.*?CORRECTION:.*?(?=\n|$)/s, '').trim();
-                    }
-                }
-                
-                // Añadir la respuesta del bot al historial
-                conversationHistory.push({
-                    role: "model",
-                    parts: [{ text: botResponse }]
-                });
-                
-                // Mostrar el mensaje del bot con corrección si existe
-                addBotMessage(cleanResponse, !!correctionText, correctionText);
-                
+                // Nuevo sistema de fetch robusto
+                const response = await fetchGeminiResponse(text);
+                renderBotResponse(response);
             } catch (error) {
-                console.error('Error al procesar la solicitud:', error);
-                
-                // Respuesta de respaldo si la API falla
-                const fallbackResponses = [
-                    "I heard you say: '" + userText + "'. Remember to use complete sentences when practicing English.",
-                    "That's interesting! Try to speak a bit more slowly to improve your pronunciation.",
-                    "Good attempt! Let's practice some common phrases. Repeat after me: 'How are you today?'",
-                    "I'm here to help you improve. Could you try to rephrase that using different vocabulary?"
-                ];
-                
-                const randomResponse = fallbackResponses[Math.floor(Math.random() * fallbackResponses.length)];
-                addBotMessage(randomResponse, false);
+                console.error(error);
+                renderSystemMessage(`Error: ${error.message}. Verifica que tu API Key sea correcta.`);
+            } finally {
+                updateUIState('idle');
             }
         }
 
-        // Sintetizar voz
-        function speakText(text) {
-            if ('speechSynthesis' in window) {
-                // Limpiar texto para quitar marcadores de corrección
-                const cleanText = text.replace(/ERROR:.*?CORRECTION:.*?(?=\n|$)/s, '').trim();
-                
-                const speech = new SpeechSynthesisUtterance(cleanText);
-                speech.lang = 'en-US';
-                speech.rate = 1.0;
-                speech.pitch = 1.0;
-                speech.volume = 1.0;
-                
-                // Intentar configurar una voz específica
-                const voices = speechSynthesis.getVoices();
-                const selectedVoice = voices.find(voice => voice.voiceURI === currentVoice);
-                if (selectedVoice) {
-                    speech.voice = selectedVoice;
+        // --- SISTEMA ROBUSTO DE FETCH ---
+        async function fetchGeminiResponse(userText) {
+            // Lista de modelos a intentar (Del más nuevo al más antiguo/estable)
+            // Si 1.5-flash-latest falla, intenta 1.5-flash-001, luego 1.5-flash, luego gemini-pro (1.0)
+            const models = ['gemini-1.5-flash-latest', 'gemini-1.5-flash', 'gemini-1.5-flash-001', 'gemini-pro'];
+            
+            let lastError = null;
+
+            for (const model of models) {
+                try {
+                    console.log(`Intentando conectar con modelo: ${model}...`);
+                    return await tryFetchModel(model, userText);
+                } catch (e) {
+                    console.warn(`Falló modelo ${model}:`, e.message);
+                    lastError = e;
+                    // Si el error es de cuota o autenticación, no tiene sentido seguir probando otros modelos
+                    if (e.message.includes("API key") || e.message.includes("quota")) {
+                        throw e;
+                    }
+                    // Si es error "not found" o "not supported", seguimos al siguiente modelo del bucle
                 }
+            }
+            
+            throw lastError || new Error("No se pudo conectar con ningún modelo de Gemini.");
+        }
+
+        async function tryFetchModel(modelName, userText) {
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${state.apiKey}`;
+            
+            const systemPrompt = `
+                You are Prof. Alex, a friendly and professional English tutor. 
+                Your goal is to converse with the user and CORRECT their grammar/vocabulary mistakes.
                 
-                speechSynthesis.speak(speech);
+                INSTRUCTIONS:
+                1. Analyze the user's input for English errors.
+                2. If errors exist, construct a 'correction' object.
+                3. For the visual correction style: 
+                   - Wrap incorrect words in <span class="text-red-500 line-through decoration-2">...</span>
+                   - Wrap correct words in <span class="text-green-500 font-bold bg-green-50 px-1 rounded">...</span>
+                   - Reconstruct the sentence showing the errors crossed out and corrections next to them.
+                4. Always provide a natural, conversational 'response' to keep the chat going.
+                5. Respond ONLY in valid JSON format.
+
+                JSON SCHEMA:
+                {
+                    "correction": {
+                        "hasError": boolean,
+                        "htmlDisplay": "String with HTML spans for red/green styling" 
+                    },
+                    "response": "String (Conversational reply)"
+                }
+
+                Example of htmlDisplay: "My favorite <span class=\"text-red-500 line-through decoration-2\">gender</span> <span class=\"text-green-500 font-bold bg-green-50 px-1 rounded\">genre</span> of music is rock."
+            `;
+
+            const payload = {
+                contents: [{
+                    parts: [{ text: userText }]
+                }],
+                systemInstruction: {
+                    parts: [{ text: systemPrompt }]
+                },
+                generationConfig: {
+                    responseMimeType: "application/json"
+                }
+            };
+
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            const data = await response.json();
+            
+            if (data.error) {
+                // Lanzamos error con el mensaje de Google
+                throw new Error(data.error.message);
+            }
+            
+            // LIMPIEZA DE RESPUESTA
+            let rawText = data.candidates[0].content.parts[0].text;
+            rawText = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
+
+            try {
+                return JSON.parse(rawText);
+            } catch (e) {
+                console.error("Error parseando JSON:", rawText);
+                throw new Error("Formato de respuesta inválido.");
             }
         }
 
-        // Inicializar la aplicación cuando se cargue la página
-        document.addEventListener('DOMContentLoaded', initApp);
-        
-        // Cargar voces disponibles para síntesis de voz
-        if ('speechSynthesis' in window) {
-            speechSynthesis.onvoiceschanged = () => {
-                // Voces cargadas
-            };
+        // --- Text to Speech (TTS) ---
+        function speakText(text) {
+            if (!state.synthesis) return;
+            
+            state.synthesis.cancel();
+
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'en-US';
+            utterance.rate = 1;
+            utterance.pitch = 1;
+
+            const voices = state.synthesis.getVoices();
+            // Buscar voz preferida: Microsoft David/Mark/Zira o Google US English
+            const preferredVoice = voices.find(v => 
+                (v.name.includes('Google US English') || v.name.includes('Microsoft David')) && v.lang.startsWith('en')
+            );
+            
+            if (preferredVoice) utterance.voice = preferredVoice;
+
+            state.synthesis.speak(utterance);
         }
+
+        // --- Utilidades ---
+        function renderSystemMessage(msg) {
+            const html = `<div class="text-center text-xs text-red-400 my-4">${msg}</div>`;
+            els.chatArea.insertAdjacentHTML('beforeend', html);
+            scrollToBottom();
+        }
+
+        function escapeHtml(text) {
+            return text.replace(/'/g, "\\'");
+        }
+        
+        window.translateText = (text) => {
+            const url = `https://translate.google.com/?sl=en&tl=es&text=${encodeURIComponent(text)}&op=translate`;
+            window.open(url, '_blank');
+        };
+
+        // --- Event Listeners ---
+        els.micBtn.addEventListener('click', handleMicClick);
+
+        els.settingsBtn.addEventListener('click', () => {
+            els.settingsModal.classList.remove('hidden');
+            els.settingsModal.classList.add('flex');
+        });
+
+        els.closeSettings.addEventListener('click', () => {
+            els.settingsModal.classList.add('hidden');
+            els.settingsModal.classList.remove('flex');
+        });
+
+        els.saveSettings.addEventListener('click', () => {
+            const key = els.apiKeyInput.value.trim();
+            if (key) {
+                localStorage.setItem('gemini_api_key', key);
+                state.apiKey = key;
+                els.settingsModal.classList.add('hidden');
+                els.settingsModal.classList.remove('flex');
+                alert("¡API Key guardada correctamente!");
+            }
+        });
+
+        init();
+        window.speechSynthesis.onvoiceschanged = () => {};
+
     </script>
 </body>
 </html>
