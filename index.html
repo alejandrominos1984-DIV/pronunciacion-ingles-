@@ -442,14 +442,15 @@
                 renderBotResponse(response);
             } catch (error) {
                 console.error(error);
-                renderSystemMessage("Error conectando con el profesor. Verifica tu API Key o conexión.");
+                renderSystemMessage(`Error: ${error.message}. Verifica API Key y cuota.`);
             } finally {
                 updateUIState('idle');
             }
         }
 
         async function fetchGeminiResponse(userText) {
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${state.apiKey}`;
+            // CAMBIO: Usamos 'gemini-1.5-flash' que es más estable y universalmente disponible
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${state.apiKey}`;
             
             const systemPrompt = `
                 You are Prof. Alex, a friendly and professional English tutor. 
@@ -499,8 +500,16 @@
             
             if (data.error) throw new Error(data.error.message);
             
-            const rawText = data.candidates[0].content.parts[0].text;
-            return JSON.parse(rawText);
+            // LIMPIEZA DE RESPUESTA: A veces Gemini añade bloques markdown
+            let rawText = data.candidates[0].content.parts[0].text;
+            rawText = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
+
+            try {
+                return JSON.parse(rawText);
+            } catch (e) {
+                console.error("Error parseando JSON:", rawText);
+                throw new Error("La IA respondió con un formato inválido. Intenta de nuevo.");
+            }
         }
 
         // --- Text to Speech (TTS) ---
