@@ -428,7 +428,6 @@
         // --- Lógica Principal (API de Gemini) ---
         async function handleUserMessage(text) {
             renderUserMessage(text);
-            // El UI state ya debería estar en processing desde onend, pero reforzamos por si acaso
             updateUIState('processing');
 
             if (!state.apiKey) {
@@ -438,19 +437,45 @@
             }
 
             try {
+                // Nuevo sistema de fetch robusto
                 const response = await fetchGeminiResponse(text);
                 renderBotResponse(response);
             } catch (error) {
                 console.error(error);
-                renderSystemMessage(`Error: ${error.message}. Verifica API Key y cuota.`);
+                renderSystemMessage(`Error: ${error.message}. Verifica que tu API Key sea correcta.`);
             } finally {
                 updateUIState('idle');
             }
         }
 
+        // --- SISTEMA ROBUSTO DE FETCH ---
         async function fetchGeminiResponse(userText) {
-            // CAMBIO: Usamos 'gemini-1.5-flash' que es más estable y universalmente disponible
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${state.apiKey}`;
+            // Lista de modelos a intentar (Del más nuevo al más antiguo/estable)
+            // Si 1.5-flash-latest falla, intenta 1.5-flash-001, luego 1.5-flash, luego gemini-pro (1.0)
+            const models = ['gemini-1.5-flash-latest', 'gemini-1.5-flash', 'gemini-1.5-flash-001', 'gemini-pro'];
+            
+            let lastError = null;
+
+            for (const model of models) {
+                try {
+                    console.log(`Intentando conectar con modelo: ${model}...`);
+                    return await tryFetchModel(model, userText);
+                } catch (e) {
+                    console.warn(`Falló modelo ${model}:`, e.message);
+                    lastError = e;
+                    // Si el error es de cuota o autenticación, no tiene sentido seguir probando otros modelos
+                    if (e.message.includes("API key") || e.message.includes("quota")) {
+                        throw e;
+                    }
+                    // Si es error "not found" o "not supported", seguimos al siguiente modelo del bucle
+                }
+            }
+            
+            throw lastError || new Error("No se pudo conectar con ningún modelo de Gemini.");
+        }
+
+        async function tryFetchModel(modelName, userText) {
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${state.apiKey}`;
             
             const systemPrompt = `
                 You are Prof. Alex, a friendly and professional English tutor. 
@@ -498,9 +523,12 @@
 
             const data = await response.json();
             
-            if (data.error) throw new Error(data.error.message);
+            if (data.error) {
+                // Lanzamos error con el mensaje de Google
+                throw new Error(data.error.message);
+            }
             
-            // LIMPIEZA DE RESPUESTA: A veces Gemini añade bloques markdown
+            // LIMPIEZA DE RESPUESTA
             let rawText = data.candidates[0].content.parts[0].text;
             rawText = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
 
@@ -508,7 +536,7 @@
                 return JSON.parse(rawText);
             } catch (e) {
                 console.error("Error parseando JSON:", rawText);
-                throw new Error("La IA respondió con un formato inválido. Intenta de nuevo.");
+                throw new Error("Formato de respuesta inválido.");
             }
         }
 
