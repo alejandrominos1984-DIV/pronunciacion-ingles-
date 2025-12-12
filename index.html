@@ -1110,14 +1110,11 @@
         // Advanced selection logic for the most natural male voice
         function selectBestMaleVoice(voices) {
             // Priority list for known high-quality voices
-            // Google US English is excellent on Chrome
-            // Microsoft Guy/David Online are great on Edge
             const preferredVoices = [
                 'Google US English', 
                 'Microsoft Guy Online (Natural)',
                 'Microsoft David', 
-                'Daniel',
-                'Samantha' // Fallback good quality female if no good male
+                'Daniel'
             ];
 
             let selectedVoice = null;
@@ -1301,8 +1298,14 @@
             chatContainer.appendChild(messageDiv);
             chatContainer.scrollTop = chatContainer.scrollHeight;
             
-            // Speak the bot's response with improved voice
-            speakText(content);
+            // Speak the bot's response
+            // MODIFICATION: Add the correction to the speech audio
+            let textToSpeak = content;
+            if (correction) {
+                textToSpeak = `Instead of saying "${correction.error}", try saying "${correction.correction}". ${content}`;
+            }
+            
+            speakText(textToSpeak);
         }
         
         // Process user input and get bot response
@@ -1339,8 +1342,7 @@
                 responseText = generateFallbackResponse(userText);
             }
             
-            // Add the bot's response after a short delay to simulate typing if using fallback
-            // If using API, the await already provided the delay
+            // Add the bot's response after a short delay
             if (!apiKey) {
                  setTimeout(() => {
                     addBotMessage(responseText, correction, recommendation);
@@ -1352,8 +1354,6 @@
             }
         }
 
-        // Mock function to simulate Gemini call or actually implement it if you have the endpoint structure
-        // Since this is a static file, we will stick to the logic provided but structure it for future API use
         async function callGeminiAPI(text) {
              const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
              
@@ -1401,20 +1401,28 @@
             return `${randomEncouragement} Can you tell me more about that?`;
         }
         
-        // Check for common English errors in user text
+        // Check for common English errors in user text - EXPANDED LIST
         function checkForErrors(text) {
             const errorPatterns = [
                 { pattern: /\bgender\b.*\bmusic\b/i, error: "gender of music", correction: "genre of music" },
                 { pattern: /\bi have went\b/i, error: "I have went", correction: "I have gone" },
                 { pattern: /\bshe don't\b/i, error: "she don't", correction: "she doesn't" },
+                { pattern: /\bhe don't\b/i, error: "he don't", correction: "he doesn't" },
+                { pattern: /\bit don't\b/i, error: "it don't", correction: "it doesn't" },
                 { pattern: /\bmore better\b/i, error: "more better", correction: "better" },
                 { pattern: /\bi am agree\b/i, error: "I am agree", correction: "I agree" },
-                { pattern: /\bfor explain\b/i, error: "for explain", correction: "to explain" }
+                { pattern: /\bfor explain\b/i, error: "for explain", correction: "to explain" },
+                { pattern: /\bpeople is\b/i, error: "people is", correction: "people are" },
+                { pattern: /\bi has\b/i, error: "I has", correction: "I have" },
+                { pattern: /\byou is\b/i, error: "you is", correction: "you are" }
             ];
             
             for (const pattern of errorPatterns) {
                 if (pattern.pattern.test(text)) {
-                    return { error: pattern.error, correction: pattern.correction };
+                    // Extract exact match for better error display
+                    const match = text.match(pattern.pattern);
+                    const specificError = match ? match[0] : pattern.error;
+                    return { error: specificError, correction: pattern.correction };
                 }
             }
             return null;
@@ -1435,8 +1443,6 @@
             if ('speechSynthesis' in window) {
                 speechSynthesis.cancel(); // Stop previous speech
                 
-                // Create a single utterance for the whole text to let the browser handle natural pauses
-                // This prevents the "jerky" robotic feeling of manual splitting
                 const utterance = new SpeechSynthesisUtterance(text);
                 
                 utterance.lang = 'en-US';
